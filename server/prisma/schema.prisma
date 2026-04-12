@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Genre {
+  action
+  comedy
+  drama
+  horror
+  romance
+  thriller
+  scifi
+  fantasy
+  animation
+  documentary
+  adventure
+  crime
+  musical
+  war
+  western
+  historical
+  sports
+  superhero
+}
+
+model UserProfile {
+  id          String   @id @db.Uuid
+  displayName String   @map("display_name") @db.VarChar(255)
+  bio         String?  @db.Text
+  avatarUrl   String?  @map("avatar_url") @db.VarChar(512)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  videos        Video[]
+  ratings       Rating[]
+  comments      Comment[]
+  watchHistory  WatchHistory[]
+  watchlist     Watchlist[]
+  subscriptions Subscription[] @relation("subscriber")
+  subscribers   Subscription[] @relation("channel")
+
+  @@map("user_profile")
+}
+
+model Video {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId    String   @map("creator_id") @db.Uuid
+  title        String   @db.VarChar(512)
+  description  String?  @db.Text
+  cloudinaryId String   @map("cloudinary_id") @db.VarChar(512)
+  thumbnailUrl String?  @map("thumbnail_url") @db.VarChar(512)
+  duration     Int?
+  genre        Genre
+  isPublic     Boolean  @default(true) @map("is_public")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  creator      UserProfile    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  ratings      Rating[]
+  comments     Comment[]
+  watchHistory WatchHistory[]
+  watchlist    Watchlist[]
+
+  @@map("video")
+}
+
+model Rating {
+  userId    String   @map("user_id") @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  score     Int      @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])
+  @@map("rating")
+}
+
+model Comment {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("comment")
+}
+
+model Subscription {
+  subscriberId String   @map("subscriber_id") @db.Uuid
+  channelId    String   @map("channel_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  subscriber UserProfile @relation("subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+  channel    UserProfile @relation("channel", fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@id([subscriberId, channelId])
+  @@map("subscription")
+}
+
+model WatchHistory {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  videoId   String   @map("video_id") @db.Uuid
+  watchedAt DateTime @default(now()) @map("watched_at")
+
+  user  UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("watch_history")
+}
+
+model Watchlist {
+  userId  String   @map("user_id") @db.Uuid
+  videoId String   @map("video_id") @db.Uuid
+  addedAt DateTime @default(now()) @map("added_at")
+
+  user  UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])
+  @@map("watchlist")
+}
