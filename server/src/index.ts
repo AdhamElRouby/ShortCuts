@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import authRouter from './routes/authRoutes';
+import videoRouter from './routes/videoRoutes';
 
 // Load environment variables from .env file
 config();
@@ -17,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ============= API Routes Setup =============
 app.use('/api/auth', authRouter);
+app.use('/api/videos', videoRouter);
 
 // ============= Error Handling Middleware =============
 // Handle 404 routes not found
