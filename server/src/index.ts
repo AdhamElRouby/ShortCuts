@@ -2,6 +2,7 @@ import express from 'express';
 import { config } from 'dotenv';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
+import authRouter from './routes/authRoutes';
 
 // Load environment variables from .env file
 config();
@@ -15,9 +16,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============= API Routes Setup =============
-app.get('/', (req, res) => {
-    res.send('Welcome to the Express TypeScript Server!');
-});
+app.use('/api/auth', authRouter);
 
 // ============= Error Handling Middleware =============
 // Handle 404 routes not found
