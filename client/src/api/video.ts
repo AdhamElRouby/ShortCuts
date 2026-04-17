@@ -63,3 +63,40 @@ export const getHlsUrl = (cloudinaryId: string): string =>
 export const getThumbnailUrl = (cloudinaryId: string, thumbnailUrl?: string | null): string =>
   thumbnailUrl ??
   `https://res.cloudinary.com/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/video/upload/${cloudinaryId}.jpg`;
+
+
+/**
+* Fetches full metadata for a single video, including creator info and average rating.
+* Required for: Displaying title, description, and creator details.
+*/
+export const getVideoById = async (videoId: string) => {
+  const response = await axiosInstance.get(`/videos/${videoId}`);
+  return response.data;
+};
+
+/**
+ * Fetches all comments for a specific video.
+ * Required for: Displaying the comment section in chronological order.
+ */
+export const getComments = async (videoId: string) => {
+  const response = await axiosInstance.get(`/videos/${videoId}/comments`);
+  return response.data;
+};
+
+/**
+ * Posts a new comment to a video.
+ * Required for: Logged-in users to share feedback.
+ */
+export const postComment = async (videoId: string, content: string) => {
+  const response = await axiosInstance.post(`/videos/${videoId}/comments`, { content });
+  return response.data;
+};
+
+/**
+ * Submits or updates a user's star rating (1-5).
+ * Required for: Interactive rating system and updating the average score.
+ */
+export const rateVideo = async (videoId: string, rating: number) => {
+  const response = await axiosInstance.post(`/videos/${videoId}/ratings`, { rating });
+  return response.data;
+};
