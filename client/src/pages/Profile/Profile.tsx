@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Loader2, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import Navbar from '@/components/Navbar/Navbar';
 
 function Profile() {
   const { userId } = useParams<{ userId: string }>();
@@ -182,19 +183,25 @@ function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-muted-foreground">
-        <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex min-h-[60vh] items-center justify-center pt-16 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin text-gold" />
+        </div>
       </div>
     );
   }
 
   if (loadError || !data) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center gap-4 px-4">
-        <p className="text-muted-foreground">{loadError ?? 'Not found'}</p>
-        <Button asChild variant="outline" className="border-white/10">
-          <Link to="/">Back home</Link>
-        </Button>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 pt-16">
+          <p className="text-muted-foreground">{loadError ?? 'Not found'}</p>
+          <Button asChild variant="outline" className="border-white/10 hover:border-gold/30 hover:text-gold">
+            <Link to="/">Back home</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -202,133 +209,147 @@ function Profile() {
   const avatarSrc = data.avatarUrl ?? undefined;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-foreground pb-16 animate-fade-in">
-      <div className="border-b border-white/10 bg-black/40">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
+    <div className="min-h-screen bg-background pb-20 text-foreground animate-fade-in">
+      <Navbar />
+
+      <div className="border-b border-white/[0.06] bg-gradient-to-b from-card/40 to-transparent">
+        <div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3 md:px-8 md:py-4">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-gold shrink-0"
+            className="shrink-0 text-muted-foreground hover:bg-white/[0.06] hover:text-gold"
             onClick={() => navigate(-1)}
             aria-label="Go back"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-gold transition-colors">
+          <Link
+            to="/"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-gold"
+          >
             Home
           </Link>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 pt-10 md:pt-14">
-        <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
-          <Avatar className="h-28 w-28 md:h-36 md:w-36 border-2 border-gold/25 shadow-lg shrink-0">
-            <AvatarImage src={avatarSrc} alt="" className="object-cover" />
-            <AvatarFallback className="bg-gold/10 text-gold text-3xl font-semibold">
-              {data.displayName[0]?.toUpperCase() ?? '?'}
-            </AvatarFallback>
-          </Avatar>
+      <main className="mx-auto max-w-[1600px] px-4 pt-8 md:px-8 md:pt-10">
+        <div className="rounded-xl border border-white/[0.06] bg-card/40 p-6 md:p-8">
+          <div className="flex flex-col items-start gap-8 md:flex-row md:gap-12">
+            <Avatar className="h-28 w-28 shrink-0 border-2 border-gold/25 shadow-[0_0_40px_rgba(201,162,39,0.12)] md:h-36 md:w-36">
+              <AvatarImage src={avatarSrc} alt="" className="object-cover" />
+              <AvatarFallback className="bg-gold/15 text-3xl font-semibold text-gold">
+                {data.displayName[0]?.toUpperCase() ?? '?'}
+              </AvatarFallback>
+            </Avatar>
 
-          <div className="flex-1 min-w-0 space-y-4">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-                {data.displayName}
-              </h1>
-              <div className="flex flex-wrap gap-x-6 gap-y-2 mt-3 text-sm text-muted-foreground">
-                <span>
-                  <span className="text-gold font-medium tabular-nums">{data.subscriberCount}</span>{' '}
-                  subscribers
-                </span>
-                <span>
-                  <span className="text-gold font-medium tabular-nums">{data.subscriptionCount}</span>{' '}
-                  subscriptions
-                </span>
+            <div className="min-w-0 flex-1 space-y-4">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-gold/75 md:text-xs">
+                  {data.isOwnProfile ? 'Your channel' : 'Creator'}
+                </p>
+                <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+                  {data.displayName}
+                </h1>
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                  <span>
+                    <span className="font-medium tabular-nums text-gold">{data.subscriberCount}</span>{' '}
+                    subscribers
+                  </span>
+                  <span>
+                    <span className="font-medium tabular-nums text-gold">{data.subscriptionCount}</span>{' '}
+                    subscriptions
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {data.bio ? (
-              <p className="text-foreground/80 whitespace-pre-wrap max-w-2xl leading-relaxed">
-                {data.bio}
-              </p>
-            ) : (
-              <p className="text-muted-foreground/60 italic text-sm">No bio yet.</p>
-            )}
-
-            <div className="flex flex-wrap gap-3 pt-2">
-              {data.isOwnProfile ? (
-                <>
-                  <Button
-                    type="button"
-                    className="bg-gold hover:bg-gold-light text-background"
-                    onClick={() => setEditOpen(true)}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Edit Profile
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-gold/40 text-gold hover:bg-gold/10"
-                    onClick={() => setUploadOpen(true)}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Video
-                  </Button>
-                </>
+              {data.bio ? (
+                <p className="max-w-2xl whitespace-pre-wrap leading-relaxed text-foreground/85">
+                  {data.bio}
+                </p>
               ) : (
-                <Button
-                  type="button"
-                  disabled={subscribeBusy}
-                  className={cn(
-                    data.isSubscribed
-                      ? 'bg-white/10 text-white hover:bg-white/15 border border-white/15'
-                      : 'bg-gold hover:bg-gold-light text-background',
-                  )}
-                  onClick={toggleSubscribe}
-                >
-                  {subscribeBusy ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : data.isSubscribed ? (
-                    'Subscribed'
-                  ) : (
-                    'Subscribe'
-                  )}
-                </Button>
+                <p className="text-sm italic text-muted-foreground/70">No bio yet.</p>
               )}
+
+              <div className="flex flex-wrap gap-3 pt-1">
+                {data.isOwnProfile ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="bg-gold font-semibold text-background shadow-[0_0_20px_rgba(201,162,39,0.2)] hover:bg-gold-light"
+                      onClick={() => setEditOpen(true)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-white/15 bg-white/[0.04] text-foreground hover:border-gold/40 hover:bg-gold/10 hover:text-gold"
+                      onClick={() => setUploadOpen(true)}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Video
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    disabled={subscribeBusy}
+                    className={cn(
+                      'font-semibold',
+                      data.isSubscribed
+                        ? 'border border-white/15 bg-white/10 text-white hover:bg-white/15'
+                        : 'bg-gold text-background shadow-[0_0_20px_rgba(201,162,39,0.2)] hover:bg-gold-light',
+                    )}
+                    onClick={toggleSubscribe}
+                  >
+                    {subscribeBusy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : data.isSubscribed ? (
+                      'Subscribed'
+                    ) : (
+                      'Subscribe'
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <section className="mt-14 md:mt-20">
-          <h2 className="text-lg font-semibold text-white mb-6 border-b border-white/10 pb-3">
-            Videos
-          </h2>
+        <section className="mt-10 md:mt-14">
+          <div className="mb-6 flex items-center justify-between border-b border-white/[0.06] pb-3">
+            <h2 className="text-xl font-semibold text-foreground md:text-2xl">
+              <span className="bg-gradient-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
+                Videos
+              </span>
+            </h2>
+          </div>
           {data.videos.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No videos yet.</p>
+            <p className="text-sm text-muted-foreground">No videos yet.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {data.videos.map((v) => (
                 <Link
                   key={v.id}
                   to={`/video/${v.id}`}
-                  className="group rounded-xl overflow-hidden border border-white/[0.06] bg-white/[0.02] hover:border-gold/30 transition-all duration-300 hover:-translate-y-0.5"
+                  className="group overflow-hidden rounded-lg border border-white/[0.05] bg-card transition-all duration-300 hover:-translate-y-1 hover:border-gold/40 hover:shadow-[0_0_24px_rgba(201,162,39,0.15)]"
                 >
-                  <div className="aspect-video bg-black/50 overflow-hidden">
+                  <div className="aspect-video overflow-hidden bg-black/50">
                     <img
                       src={getThumbnailUrl(v.cloudinaryId, v.thumbnailUrl)}
                       alt=""
-                      className="w-full h-full object-cover group-hover:opacity-90 transition-opacity"
+                      className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
                     />
                   </div>
-                  <div className="p-3 space-y-1">
-                    <p className="font-medium text-white line-clamp-2 group-hover:text-gold transition-colors">
+                  <div className="space-y-1 p-3">
+                    <p className="line-clamp-2 font-semibold text-foreground transition-colors group-hover:text-gold">
                       {v.title}
                     </p>
                     {v.duration != null && (
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        {Math.floor(v.duration / 60)}:
-                        {String(v.duration % 60).padStart(2, '0')}
+                      <p className="text-xs tabular-nums text-muted-foreground">
+                        {Math.floor(v.duration / 60)}:{String(v.duration % 60).padStart(2, '0')}
                       </p>
                     )}
                   </div>
@@ -337,10 +358,10 @@ function Profile() {
             </div>
           )}
         </section>
-      </div>
+      </main>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-md bg-popover border-white/10">
+        <DialogContent className="border-white/[0.08] bg-popover/95 backdrop-blur-md sm:max-w-md">
           <form onSubmit={handleSaveProfile}>
             <DialogHeader>
               <DialogTitle>Edit profile</DialogTitle>
@@ -401,7 +422,7 @@ function Profile() {
       </Dialog>
 
       <Dialog open={uploadOpen} onOpenChange={(o) => !uploading && setUploadOpen(o)}>
-        <DialogContent className="sm:max-w-lg bg-popover border-white/10 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-white/[0.08] bg-popover/95 backdrop-blur-md sm:max-w-lg">
           <form onSubmit={handleUploadVideo}>
             <DialogHeader>
               <DialogTitle>Upload video</DialogTitle>
