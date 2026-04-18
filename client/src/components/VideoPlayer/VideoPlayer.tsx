@@ -19,6 +19,7 @@
  *   className     — optional. Extra class names on the wrapper div.
  */
 import { useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import videojs from 'video.js';
 import type Player from 'video.js/dist/types/player';
 import 'video.js/dist/video-js.css';
@@ -134,6 +135,18 @@ const qualityButtonCSS = `
 .vjs-quality-selector .vjs-menu {
   width: 6em;
 }
+/* Watch shell: cap height; keep video letterboxed; round player chrome (avoid overflow on outer wrappers — clips control bar) */
+[data-watch-video] .video-js.vjs-fluid:not(.vjs-audio-only) {
+  max-height: min(70vh, 85vw);
+  border-radius: 1rem;
+}
+[data-watch-video] .video-js .vjs-tech {
+  object-fit: contain;
+  background: #000;
+}
+[data-watch-video] .video-js .vjs-control-bar {
+  z-index: 3;
+}
 `;
 
 /* ------------------------------------------------------------------ */
@@ -159,11 +172,12 @@ export default function VideoPlayer({
   // Inject quality-button CSS once
   useEffect(() => {
     const id = 'vjs-quality-selector-css';
-    if (document.getElementById(id)) return;
-    const style = document.createElement('style');
-    style.id = id;
-    style.textContent = qualityButtonCSS;
-    document.head.appendChild(style);
+    if (!document.getElementById(id)) {
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = qualityButtonCSS;
+      document.head.appendChild(style);
+    }
   }, []);
 
   // Initialise player once on mount
@@ -179,6 +193,8 @@ export default function VideoPlayer({
       controls: true,
       responsive: true,
       fluid: true,
+      // 0 = never auto-hide control bar (seek/play/pause stay available)
+      inactivityTimeout: 0,
       poster: thumbnailUrl,
       sources: [{ src: hlsUrl, type: 'application/x-mpegURL' }],
     });
@@ -224,9 +240,10 @@ export default function VideoPlayer({
   return (
     <div
       data-vjs-player
-      className={`rounded-lg overflow-hidden bg-black ${className ?? ''}`}
+      data-watch-video
+      className={cn('relative w-full bg-black', className)}
     >
-      <div ref={containerRef} />
+      <div ref={containerRef} className="w-full" />
     </div>
   );
 }
