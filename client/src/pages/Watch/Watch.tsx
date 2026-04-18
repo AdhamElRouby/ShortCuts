@@ -1,245 +1,381 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
+import Navbar from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Star, MessageSquare, Send } from 'lucide-react';
 import {
-    getVideoById,
-    getComments,
-    postComment,
-    rateVideo,
-    getThumbnailUrl,
-    getHlsUrl
+  getVideoById,
+  getComments,
+  postComment,
+  rateVideo,
+  getThumbnailUrl,
+  getHlsUrl,
 } from '@/api/video';
 
-
 interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  user: {
     id: string;
-    content: string;
-    createdAt: string;
-    user: {
-        id: string;
-        name: string;
-        avatarUrl: string | null;
-    };
+    name: string;
+    avatarUrl: string | null;
+  };
 }
 
 interface VideoData {
+  id: string;
+  title: string;
+  description: string | null;
+  cloudinaryId: string;
+  thumbnailUrl: string | null;
+  averageRating: number;
+  userRating?: number;
+  creator: {
     id: string;
-    title: string;
-    description: string;
-    cloudinaryId: string;
-    thumbnailUrl: string | null;
-    averageRating: number;
-    userRating?: number;
-    creator: {
-        id: string;
-        name: string;
-        avatarUrl: string | null;
-    };
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
+function formatCommentTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
 }
 
 export default function WatchPage() {
-    const { videoId } = useParams<{ videoId: string }>();
-    const { user } = useAuth();
+  const { videoId } = useParams<{ videoId: string }>();
+  const { user } = useAuth();
 
-    const [video, setVideo] = useState<VideoData | null>(null);
-    
+  const [video, setVideo] = useState<VideoData | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [userRating, setUserRating] = useState<number | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
-    const [comments, setComments] = useState<Comment[]>([]);
-    const [newComment, setNewComment] = useState('');
-    const [userRating, setUserRating] = useState<number>(0);
-    const [loading, setLoading] = useState(true);
-    const [commentLoading, setCommentLoading] = useState(false);
+  const loadData = useCallback(async () => {
+    if (!videoId) return;
+    try {
+      setLoading(true);
+      const [videoData, commentsData] = await Promise.all([
+        getVideoById(videoId),
+        getComments(videoId),
+      ]);
+      setVideo(videoData);
+      setComments(Array.isArray(commentsData) ? commentsData : []);
+      setUserRating(
+        typeof videoData.userRating === 'number' ? videoData.userRating : undefined,
+      );
+    } catch (err) {
+      console.error('Failed to load video:', err);
+      setVideo(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [videoId]);
 
-    useEffect(() => {
-        if (videoId) {
-            loadData();
-        }
-    }, [videoId]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
+  const handleRate = async (rating: number) => {
+    if (!user || !video) return;
+    setRatingLoading(true);
+    try {
+      const data = await rateVideo(video.id, rating);
+      setUserRating(data.userRating);
+      setVideo((prev) =>
+        prev ? { ...prev, averageRating: data.averageRating, userRating: data.userRating } : null,
+      );
+    } catch (err) {
+      console.error('Rating failed:', err);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
 
-    const loadData = async () => {
-        try {
-            setLoading(true);
-            const [videoData, commentsData] = await Promise.all([
-                getVideoById(videoId!),
-                getComments(videoId!)
-            ]);
-            setVideo(videoData);
-            setComments(commentsData);
-            if (videoData.userRating) setUserRating(videoData.userRating);
-        } catch (err) {
-            console.error("Failed to load video:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newComment.trim();
+    if (!trimmed || !video) return;
 
-    const handleRate = async (rating: number) => {
-        if (!user || !video) return;
-        try {
-            await rateVideo(video.id, rating);
-            setUserRating(rating);
-            // Refresh video data to get updated average
-            const updatedVideo = await getVideoById(video.id);
-            setVideo(updatedVideo);
-        } catch (err) {
-            console.error("Rating failed:", err);
-        }
-    };
+    setCommentLoading(true);
+    try {
+      const addedComment = await postComment(video.id, trimmed);
+      setComments((prev) => [...prev, addedComment]);
+      setNewComment('');
+    } catch (err) {
+      console.error('Comment failed:', err);
+    } finally {
+      setCommentLoading(false);
+    }
+  };
 
-    const handleCommentSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newComment.trim() || !video) return;
-
-        setCommentLoading(true);
-        try {
-            const addedComment = await postComment(video.id, newComment);
-            setComments((prev) => [addedComment, ...prev]);
-            setNewComment('');
-        } catch (err) {
-            console.error("Comment failed:", err);
-        } finally {
-            setCommentLoading(false);
-        }
-    };
-
-    if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-gold">Loading cinema...</div>;
-    if (!video) return <div className="min-h-screen bg-background flex items-center justify-center text-white"> Video not found.</div>;
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-foreground pb-20">
-            {/* Video Section */}
-            <div className="w-full bg-black aspect-video max-h-[70vh]">
-                <VideoPlayer
-                    hlsUrl={getHlsUrl(video.cloudinaryId)}
-                    thumbnailUrl={getThumbnailUrl(video.cloudinaryId, video.thumbnailUrl)}
-                    autoplay={true}
-                />
-            </div>
-
-            <div className="max-w-6xl mx-auto px-4 md:px-8 mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Left: Video Details */}
-                <div className="lg:col-span-2 space-y-6 animate-fade-in">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">{video.title}</h1>
-                        <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-b border-white/10">
-
-                            {/* Creator Info */}
-                            <Link to={`/profile/${video.creator.id}`} className="flex items-center gap-3 group">
-                                <Avatar className="h-12 w-12 border border-gold/20 group-hover:border-gold transition-colors">
-                                    <AvatarImage src={video.creator.avatarUrl || ''} />
-                                    <AvatarFallback className="bg-gold/10 text-gold">{video.creator.name[0]}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold text-white group-hover:text-gold transition-colors">{video.creator.name}</p>
-                                    <p className="text-xs text-muted-foreground">Content Creator</p>
-                                </div>
-                            </Link>
-
-                            {/* Rating Display/Interaction */}
-                            <div className="flex flex-col items-end">
-                                <div className="flex items-center gap-1 mb-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            onClick={() => handleRate(star)}
-                                            disabled={!user}
-                                            className={`cursor-pointer transition-all duration-200 ${star <= (userRating || video.averageRating)
-                                                    ? 'text-gold fill-gold'
-                                                    : 'text-white/20 hover:text-gold/50'
-                                                } ${!user && 'cursor-default'}`}
-                                        >
-                                            <Star className="w-6 h-6" />
-                                        </button>
-                                    ))}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Average: <span className="text-gold font-medium">{video.averageRating.toFixed(1)}</span> / 5
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="bg-white/[0.03] rounded-xl p-4 border border-white/[0.06]">
-                        <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                            {video.description}
-                        </p>
-                    </div>
-
-                    {/* Comments Section */}
-                    <div className="space-y-6 pt-4">
-                        <div className="flex items-center gap-2 text-xl font-semibold text-white">
-                            <MessageSquare className="w-5 h-5 text-gold" />
-                            Comments ({comments.length})
-                        </div>
-
-                        {/* Post Comment */}
-                        {user ? (
-                            <form onSubmit={handleCommentSubmit} className="relative group">
-                                <Textarea
-                                    placeholder="Share your thoughts..."
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    className="bg-white/[0.04] border-white/[0.1] focus:border-gold/50 focus:ring-gold/20 min-h-[100px] pr-12 transition-all"
-                                />
-                                <Button
-                                    type="submit"
-                                    disabled={commentLoading || !newComment.trim()}
-                                    size="icon"
-                                    className="absolute bottom-3 right-3 bg-gold hover:bg-gold-light text-background rounded-full transition-transform active:scale-90"
-                                >
-                                    <Send className="w-4 h-4" />
-                                </Button>
-                            </form>
-                        ) : (
-                            <p className="text-sm text-muted-foreground bg-white/[0.02] p-4 rounded-lg border border-dashed border-white/10">
-                                Please <Link to="/login" className="text-gold hover:underline">sign in</Link> to join the conversation.
-                            </p>
-                        )}
-
-                        {/* Comment List */}
-                        <div className="space-y-4">
-                            {comments.map((comment) => (
-                                <div
-                                    key={comment.id}
-                                    className="flex gap-4 p-4 rounded-lg bg-white/[0.02] border border-transparent hover:border-white/[0.05] transition-all animate-fade-in-up"
-                                >
-                                    <Avatar className="h-10 w-10">
-                                        <AvatarImage src={comment.user.avatarUrl || ''} />
-                                        <AvatarFallback className="bg-white/10">{comment.user.name[0]}</AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex-1 space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <p className="text-sm font-medium text-white">{comment.user.name}</p>
-                                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                                                {new Date(comment.createdAt).toLocaleDateString()}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-foreground/70">{comment.content}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right: Sidebar (Placeholder for "Up Next") */}
-                <div className="hidden lg:block space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50 border-b border-white/10 pb-2">
-                        Recommended
-                    </h3>
-                    <div className="p-8 text-center border border-dashed border-white/10 rounded-xl">
-                        <p className="text-sm text-muted-foreground/40 italic">More cinema coming soon...</p>
-                    </div>
-                </div>
-            </div>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex min-h-[50vh] items-center justify-center pt-16 text-muted-foreground">
+          <span className="text-gold">Loading…</span>
         </div>
+      </div>
     );
+  }
+
+  if (!video) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 pt-16 text-center">
+          <p className="text-muted-foreground">Video not found.</p>
+          <Button asChild variant="outline" className="border-white/10 hover:border-gold/30 hover:text-gold">
+            <Link to="/">Back home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = (name: string) =>
+    name
+      .split(' ')
+      .map((p) => p[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?';
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <Navbar />
+
+      {/* Player only — metadata lives below, never over the video */}
+      <div className="pt-16">
+        <div className="mx-auto max-w-[1600px] px-4 md:px-8">
+          {/* No overflow-hidden — it clips Video.js control bar (seek, volume, fullscreen) */}
+          <div className="rounded-2xl border border-white/[0.08] bg-black shadow-[0_12px_48px_rgba(0,0,0,0.45)] ring-1 ring-white/[0.05]">
+            <VideoPlayer
+              className="rounded-2xl"
+              hlsUrl={getHlsUrl(video.cloudinaryId)}
+              thumbnailUrl={getThumbnailUrl(video.cloudinaryId, video.thumbnailUrl)}
+              autoplay={false}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Metadata + engagement — separate surface from the player */}
+      <div className="border-t border-white/[0.06] bg-gradient-to-b from-[#0c0c0c] to-background">
+        <div className="mx-auto max-w-4xl space-y-10 px-4 py-10 md:px-6 md:py-12 lg:max-w-[1600px] lg:px-8">
+          {/* Title + creator + ratings — single card, tighter max width on text-heavy viewports */}
+          <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-card/90 via-card/50 to-card/25 shadow-[0_8px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
+            <div className="border-b border-white/[0.06] px-5 py-5 md:px-7 md:py-6">
+              <h1 className="text-balance break-words text-2xl font-bold capitalize leading-tight tracking-tight text-foreground md:text-3xl lg:text-[2rem]">
+                {video.title}
+              </h1>
+            </div>
+
+            <div className="grid gap-6 p-5 md:gap-8 md:p-7 lg:grid-cols-[1fr_380px] lg:items-stretch xl:grid-cols-[1fr_420px]">
+              <Link
+                to={`/profile/${video.creator.id}`}
+                className="group flex min-h-0 min-w-0 items-center gap-4 rounded-xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08] transition-colors hover:bg-white/[0.07] hover:ring-gold/25"
+              >
+                <Avatar className="h-14 w-14 shrink-0 border-2 border-gold/30 shadow-sm transition-colors group-hover:border-gold/50 md:h-16 md:w-16">
+                  {video.creator.avatarUrl ? (
+                    <AvatarImage src={video.creator.avatarUrl} alt="" className="object-cover" />
+                  ) : null}
+                  <AvatarFallback className="text-base font-semibold text-gold md:text-lg">
+                    {initials(video.creator.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+                    Creator
+                  </p>
+                  <p className="mt-0.5 truncate text-lg font-semibold text-foreground transition-colors group-hover:text-gold md:text-xl">
+                    {video.creator.name}
+                  </p>
+                </div>
+              </Link>
+
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                <div className="flex min-h-[112px] min-w-0 flex-col justify-between rounded-xl bg-black/45 p-4 ring-1 ring-white/10">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Average rating
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          strokeWidth={1.5}
+                          className={`h-5 w-5 shrink-0 ${
+                            star <= Math.round(video.averageRating)
+                              ? 'fill-gold text-gold'
+                              : 'fill-transparent text-zinc-600'
+                          }`}
+                          aria-hidden
+                        />
+                      ))}
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold tabular-nums text-gold">
+                        {video.averageRating.toFixed(1)}
+                      </span>
+                      <span className="text-sm text-zinc-500">/ 5</span>
+                    </div>
+                  </div>
+                </div>
+
+                {user ? (
+                  <div className="flex min-h-[112px] min-w-0 flex-col justify-between rounded-xl bg-black/45 p-4 ring-1 ring-white/10">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                      Your rating
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          disabled={ratingLoading}
+                          onClick={() => handleRate(star)}
+                          className="-m-0.5 rounded-md p-1 transition-transform hover:scale-110 disabled:opacity-50"
+                          aria-label={`Rate ${star} stars`}
+                        >
+                          <Star
+                            strokeWidth={1.5}
+                            className={`h-7 w-7 sm:h-8 sm:w-8 ${
+                              userRating !== undefined && star <= userRating
+                                ? 'fill-gold text-gold'
+                                : 'fill-transparent text-zinc-500 hover:text-gold/80'
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex min-h-[112px] min-w-0 flex-col items-center justify-center rounded-xl bg-black/35 p-4 text-center ring-1 ring-dashed ring-white/15">
+                    <p className="text-sm text-zinc-400">
+                      <Link to="/login" className="font-semibold text-gold hover:underline">
+                        Sign in
+                      </Link>{' '}
+                      to rate
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <section className="space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              About this film
+            </h2>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 md:p-7">
+              <p className="text-base leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                {video.description?.trim()
+                  ? video.description
+                  : 'No description has been added for this title yet.'}
+              </p>
+            </div>
+          </section>
+
+          <section className="border-t border-white/[0.06] pt-10">
+            <div className="mb-6 flex items-center gap-2">
+              <MessageSquare className="h-6 w-6 text-gold" />
+              <h2 className="text-xl font-semibold text-foreground md:text-2xl">
+                Comments{' '}
+                <span className="font-normal text-muted-foreground">({comments.length})</span>
+              </h2>
+            </div>
+
+            <div className="space-y-6">
+              {user ? (
+                <form onSubmit={handleCommentSubmit} className="relative">
+                  <Textarea
+                    placeholder="Share your thoughts…"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="min-h-[120px] resize-y border-white/[0.08] bg-white/[0.04] pr-14 text-base focus-visible:border-gold/40 focus-visible:ring-gold/20"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={commentLoading || !newComment.trim()}
+                    size="icon"
+                    className="absolute bottom-3 right-3 h-11 w-11 rounded-full bg-gold text-background shadow-lg hover:bg-gold-light"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              ) : (
+                <p className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-sm text-muted-foreground">
+                  Please{' '}
+                  <Link to="/login" className="font-medium text-gold hover:underline">
+                    sign in
+                  </Link>{' '}
+                  to comment.
+                </p>
+              )}
+
+              <ul className="space-y-4">
+                {comments.map((comment) => (
+                  <li
+                    key={comment.id}
+                    className="flex gap-4 rounded-xl border border-white/[0.05] bg-card/30 p-4 transition-colors hover:border-white/[0.1]"
+                  >
+                    <Link to={`/profile/${comment.user.id}`} className="shrink-0">
+                      <Avatar className="h-11 w-11 border border-white/[0.08]">
+                        {comment.user.avatarUrl ? (
+                          <AvatarImage src={comment.user.avatarUrl} alt="" />
+                        ) : null}
+                        <AvatarFallback className="bg-gold/10 text-sm font-medium text-gold">
+                          {initials(comment.user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <Link
+                          to={`/profile/${comment.user.id}`}
+                          className="font-semibold text-foreground hover:text-gold"
+                        >
+                          {comment.user.name}
+                        </Link>
+                        <time
+                          dateTime={comment.createdAt}
+                          className="text-xs tabular-nums text-muted-foreground"
+                        >
+                          {formatCommentTime(comment.createdAt)}
+                        </time>
+                      </div>
+                      <p className="text-sm leading-relaxed text-foreground/85">{comment.content}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <aside className="lg:hidden">
+            <h3 className="mb-3 border-b border-white/[0.08] pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Recommended
+            </h3>
+            <div className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-muted-foreground/60">
+              More coming soon…
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  );
 }

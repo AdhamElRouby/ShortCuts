@@ -77,7 +77,8 @@ export const getChannels = async (req: Request, res: Response) => {
   });
 
   const channels = await Promise.all(
-    profiles.map(async (profile) => {
+    profiles.map(
+      async (profile: { id: string; displayName: string; avatarUrl: string | null }) => {
       const subscriberCount = await prisma.subscription.count({
         where: { channelId: profile.id },
       });
@@ -88,12 +89,12 @@ export const getChannels = async (req: Request, res: Response) => {
         avatarUrl: profile.avatarUrl,
         subscriberCount,
       };
-    })
+      }
+    )
   );
 
   res.status(200).json(channels);
 };
-
 export const subscribeToUser = async (req: Request, res: Response) => {
   const viewerId = req.user?.id;
   if (!viewerId) throw new CustomAPIError('Unauthorized', 401);

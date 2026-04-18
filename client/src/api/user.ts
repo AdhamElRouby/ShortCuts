@@ -36,7 +36,6 @@ export const getChannels = async (): Promise<ChannelInfo[]> => {
   const { data } = await axiosInstance.get<ChannelInfo[]>('/users');
   return data;
 };
-
 export const getUserProfile = async (userId: string): Promise<PublicProfile> => {
   const { data } = await axiosInstance.get<PublicProfile>(`/users/${userId}`);
   return data;

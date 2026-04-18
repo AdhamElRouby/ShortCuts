@@ -96,7 +96,13 @@ export const postComment = async (videoId: string, content: string) => {
  * Submits or updates a user's star rating (1-5).
  * Required for: Interactive rating system and updating the average score.
  */
-export const rateVideo = async (videoId: string, rating: number) => {
-  const response = await axiosInstance.post(`/videos/${videoId}/ratings`, { rating });
-  return response.data;
+export const rateVideo = async (
+  videoId: string,
+  rating: number,
+): Promise<{ averageRating: number; userRating: number }> => {
+  const { data } = await axiosInstance.post<{ averageRating: number; userRating: number }>(
+    `/videos/${videoId}/ratings`,
+    { rating },
+  );
+  return data;
 };

@@ -1,12 +1,12 @@
+// Must run before any module that reads process.env (e.g. db/supabase).
+import 'dotenv/config';
+
 import express from 'express';
-import { config } from 'dotenv';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import authRouter from './routes/authRoutes';
+import userRouter from './routes/userRoutes';
 import videoRouter from './routes/videoRoutes';
-
-// Load environment variables from .env file
-config();
 
 const app = express();
 const PORT = 3000;
@@ -18,6 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ============= API Routes Setup =============
 app.use('/api/auth', authRouter);
+app.use('/api/users', userRouter);
 app.use('/api/videos', videoRouter);
 
 // ============= Error Handling Middleware =============
