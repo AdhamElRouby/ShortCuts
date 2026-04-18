@@ -112,9 +112,10 @@
     
                                    /* Skip type checking all .d.ts files. */
   }
-  , "exclude": [
+  , "include": ["src"],
+  "exclude": [
     "node_modules",
-    "**/_tests_/**",
+    "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "src/test/**"

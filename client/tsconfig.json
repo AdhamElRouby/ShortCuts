@@ -12,7 +12,7 @@
   },
   "exclude": [
     "node_modules",
-    "**/_tests_/**",
+    "**/__tests__/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "src/test/**"
