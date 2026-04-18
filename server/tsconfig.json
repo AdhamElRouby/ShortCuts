@@ -108,6 +108,14 @@
 
     /* Completeness */
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
-    "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
+    "skipLibCheck": true ,
+    "exclude": [
+    "node_modules",
+    "**/_tests_/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/test/**"
+  ]
+                                   /* Skip type checking all .d.ts files. */
   }
 }

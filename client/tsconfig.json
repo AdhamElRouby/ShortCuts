@@ -8,6 +8,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "exclude": [
+    "node_modules",
+    "**/_tests_/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/test/**"
+  ]
   }
 }
