@@ -30,13 +30,16 @@ export interface ChannelInfo {
   displayName: string;
   avatarUrl: string | null;
   subscriberCount: number;
+  isSubscribed: boolean;
 }
 
 export const getChannels = async (): Promise<ChannelInfo[]> => {
   const { data } = await axiosInstance.get<ChannelInfo[]>('/users');
   return data;
 };
-export const getUserProfile = async (userId: string): Promise<PublicProfile> => {
+export const getUserProfile = async (
+  userId: string,
+): Promise<PublicProfile> => {
   const { data } = await axiosInstance.get<PublicProfile>(`/users/${userId}`);
   return data;
 };
@@ -47,15 +50,17 @@ export const updateProfile = async (formData: FormData) => {
 };
 
 export const subscribeToUser = async (userId: string) => {
-  const { data } = await axiosInstance.post<{ subscriberCount: number; isSubscribed: boolean }>(
-    `/users/${userId}/subscribe`,
-  );
+  const { data } = await axiosInstance.post<{
+    subscriberCount: number;
+    isSubscribed: boolean;
+  }>(`/users/${userId}/subscribe`);
   return data;
 };
 
 export const unsubscribeFromUser = async (userId: string) => {
-  const { data } = await axiosInstance.delete<{ subscriberCount: number; isSubscribed: boolean }>(
-    `/users/${userId}/subscribe`,
-  );
+  const { data } = await axiosInstance.delete<{
+    subscriberCount: number;
+    isSubscribed: boolean;
+  }>(`/users/${userId}/subscribe`);
   return data;
 };

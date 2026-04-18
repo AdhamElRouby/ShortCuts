@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home', end: true },
-  { to: '/channels', label: 'Browse' },
+  { to: '/channels', label: 'Channels' },
   { to: '/watchlist', label: 'Watchlist' },
   { to: '/subscriptions', label: 'Subscriptions' },
 ];

@@ -35,6 +35,7 @@ import { ArrowLeft, Loader2, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Navbar from '@/components/Navbar/Navbar';
+import Loading from '../Loading/Loading';
 
 function Profile() {
   const { userId } = useParams<{ userId: string }>();
@@ -183,12 +184,7 @@ function Profile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex min-h-[60vh] items-center justify-center pt-16 text-muted-foreground">
-          <Loader2 className="h-8 w-8 animate-spin text-gold" />
-        </div>
-      </div>
+      <Loading />
     );
   }
 
@@ -307,7 +303,7 @@ function Profile() {
                     {subscribeBusy ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : data.isSubscribed ? (
-                      'Subscribed'
+                      'Unsubscribe'
                     ) : (
                       'Subscribe'
                     )}

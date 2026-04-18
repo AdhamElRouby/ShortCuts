@@ -24,34 +24,38 @@ export const getUserProfile = async (req: Request, res: Response) => {
     throw new CustomAPIError('User not found', 404);
   }
 
-  const [subscriberCount, subscriptionCount, videos, subscriptionRow] = await Promise.all([
-    prisma.subscription.count({ where: { channelId: userId } }),
-    prisma.subscription.count({ where: { subscriberId: userId } }),
-    prisma.video.findMany({
-      where: {
-        creatorId: userId,
-        ...(viewerId === userId ? {} : { isPublic: true }),
-      },
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        cloudinaryId: true,
-        thumbnailUrl: true,
-        duration: true,
-        genre: true,
-        createdAt: true,
-      },
-    }),
-    viewerId
-      ? prisma.subscription.findUnique({
-          where: {
-            subscriberId_channelId: { subscriberId: viewerId, channelId: userId },
-          },
-        })
-      : Promise.resolve(null),
-  ]);
+  const [subscriberCount, subscriptionCount, videos, subscriptionRow] =
+    await Promise.all([
+      prisma.subscription.count({ where: { channelId: userId } }),
+      prisma.subscription.count({ where: { subscriberId: userId } }),
+      prisma.video.findMany({
+        where: {
+          creatorId: userId,
+          ...(viewerId === userId ? {} : { isPublic: true }),
+        },
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          cloudinaryId: true,
+          thumbnailUrl: true,
+          duration: true,
+          genre: true,
+          createdAt: true,
+        },
+      }),
+      viewerId
+        ? prisma.subscription.findUnique({
+            where: {
+              subscriberId_channelId: {
+                subscriberId: viewerId,
+                channelId: userId,
+              },
+            },
+          })
+        : Promise.resolve(null),
+    ]);
 
   const isOwnProfile = viewerId === userId;
   const isSubscribed = Boolean(subscriptionRow);
@@ -72,25 +76,44 @@ export const getUserProfile = async (req: Request, res: Response) => {
 };
 
 export const getChannels = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
   const profiles = await prisma.userProfile.findMany({
     orderBy: { createdAt: 'desc' },
   });
 
   const channels = await Promise.all(
     profiles.map(
-      async (profile: { id: string; displayName: string; avatarUrl: string | null }) => {
-      const subscriberCount = await prisma.subscription.count({
-        where: { channelId: profile.id },
-      });
+      async (profile: {
+        id: string;
+        displayName: string;
+        avatarUrl: string | null;
+      }) => {
+        const subscriberCount = await prisma.subscription.count({
+          where: { channelId: profile.id },
+        });
 
-      return {
-        id: profile.id,
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
-        subscriberCount,
-      };
-      }
-    )
+        const isSubscribed = viewerId
+          ? Boolean(
+              await prisma.subscription.findUnique({
+                where: {
+                  subscriberId_channelId: {
+                    subscriberId: viewerId,
+                    channelId: profile.id,
+                  },
+                },
+              }),
+            )
+          : false;
+
+        return {
+          id: profile.id,
+          displayName: profile.displayName,
+          avatarUrl: profile.avatarUrl,
+          subscriberCount,
+          isSubscribed,
+        };
+      },
+    ),
   );
 
   res.status(200).json(channels);
@@ -106,7 +129,9 @@ export const subscribeToUser = async (req: Request, res: Response) => {
     throw new CustomAPIError('Cannot subscribe to yourself', 400);
   }
 
-  const channel = await prisma.userProfile.findUnique({ where: { id: channelId } });
+  const channel = await prisma.userProfile.findUnique({
+    where: { id: channelId },
+  });
   if (!channel) {
     throw new CustomAPIError('User not found', 404);
   }
@@ -120,7 +145,9 @@ export const subscribeToUser = async (req: Request, res: Response) => {
     });
   }
 
-  const subscriberCount = await prisma.subscription.count({ where: { channelId } });
+  const subscriberCount = await prisma.subscription.count({
+    where: { channelId },
+  });
 
   res.status(200).json({ subscriberCount, isSubscribed: true });
 };
@@ -136,7 +163,9 @@ export const unsubscribeFromUser = async (req: Request, res: Response) => {
     where: { subscriberId: viewerId, channelId },
   });
 
-  const subscriberCount = await prisma.subscription.count({ where: { channelId } });
+  const subscriberCount = await prisma.subscription.count({
+    where: { channelId },
+  });
 
   res.status(200).json({ subscriberCount, isSubscribed: false });
 };

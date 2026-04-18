@@ -15,6 +15,7 @@ import {
   getThumbnailUrl,
   getHlsUrl,
 } from '@/api/video';
+import Loading from '../Loading/Loading';
 
 interface Comment {
   id: string;
@@ -122,12 +123,7 @@ export default function WatchPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="flex min-h-[50vh] items-center justify-center pt-16 text-muted-foreground">
-          <span className="text-gold">Loading…</span>
-        </div>
-      </div>
+      <Loading />
     );
   }
 

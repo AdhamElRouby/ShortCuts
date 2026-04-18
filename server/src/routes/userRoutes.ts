@@ -10,7 +10,7 @@ import {
 
 const router = Router();
 
-router.get('/', getChannels);
+router.get('/', optionalAuthenticateUser, getChannels);
 router.post('/:userId/subscribe', authenticateUser, subscribeToUser);
 router.delete('/:userId/subscribe', authenticateUser, unsubscribeFromUser);
 router.get('/:userId', optionalAuthenticateUser, getUserProfile);
