@@ -25,6 +25,17 @@ export interface PublicProfile {
   videos: PublicProfileVideo[];
 }
 
+export interface ChannelInfo {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  subscriberCount: number;
+}
+
+export const getChannels = async (): Promise<ChannelInfo[]> => {
+  const { data } = await axiosInstance.get<ChannelInfo[]>('/users');
+  return data;
+};
 export const getUserProfile = async (userId: string): Promise<PublicProfile> => {
   const { data } = await axiosInstance.get<PublicProfile>(`/users/${userId}`);
   return data;
