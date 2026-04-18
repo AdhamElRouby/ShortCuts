@@ -28,6 +28,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -161,6 +162,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    const next = await fetchProfile();
+    if (next) setProfile(next);
+  };
+
   const signOut = async () => {
     signingOut.current = true;
     currentUserId.current = null;
@@ -171,7 +178,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signInWithGoogle, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        signUp,
+        signIn,
+        signInWithGoogle,
+        signOut,
+        resetPassword,
+        updatePassword,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

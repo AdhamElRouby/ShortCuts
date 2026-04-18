@@ -1,22 +1,10 @@
 import { Request, Response } from 'express';
-import type { UploadApiOptions, UploadApiResponse } from 'cloudinary';
-import cloudinary from '../utils/cloudinary';
+import { uploadBuffer } from '../utils/uploadToCloudinary';
 import { prisma } from '../db/prisma';
 import CustomAPIError from '../errors/CustomAPIError';
 import { Genre } from '../generated/prisma/enums';
 
 const VALID_GENRES = Object.values(Genre) as string[];
-
-function streamUpload(buffer: Buffer, options: UploadApiOptions): Promise<UploadApiResponse> {
-  return new Promise((resolve, reject) => {
-    cloudinary.uploader
-      .upload_stream(options, (err, result) => {
-        if (err || !result) return reject(err ?? new Error('Upload failed'));
-        resolve(result);
-      })
-      .end(buffer);
-  });
-}
 
 export const uploadVideo = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
@@ -41,7 +29,7 @@ export const uploadVideo = async (req: Request, res: Response) => {
   }
 
   // Upload video to Cloudinary; HLS manifest is pre-generated asynchronously
-  const videoResult = await streamUpload(videoFile.buffer, {
+  const videoResult = await uploadBuffer(videoFile.buffer, {
     resource_type: 'video',
     folder: 'videos',
     eager: [{ streaming_profile: 'hd', format: 'm3u8' }],
@@ -51,7 +39,7 @@ export const uploadVideo = async (req: Request, res: Response) => {
   // Upload optional thumbnail
   let thumbnailUrl: string | null = null;
   if (thumbnailFile) {
-    const thumbResult = await streamUpload(thumbnailFile.buffer, {
+    const thumbResult = await uploadBuffer(thumbnailFile.buffer, {
       resource_type: 'image',
       folder: 'thumbnails',
     });

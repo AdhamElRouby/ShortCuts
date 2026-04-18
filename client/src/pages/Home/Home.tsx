@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Play, Plus, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 
 // PLACEHOLDER: Replace with real data from videos API when video listing is implemented
@@ -223,8 +224,17 @@ function Hero({ video }: { video: HomeVideo }) {
 }
 
 function Home() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const firstName = profile?.displayName?.split(' ')[0];
+
+  const profileInitials =
+    profile?.displayName
+      ?.split(' ')
+      .map((part) => part[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U';
 
   return (
     <div className="min-h-screen bg-background">
@@ -243,6 +253,40 @@ function Home() {
                 Ready for tonight, {firstName}?
               </h2>
             </div>
+          )}
+
+          {user && profile && (
+            <Link
+              to={`/profile/${user.id}`}
+              className="group flex items-center gap-4 md:gap-5 rounded-xl border border-white/[0.06] bg-card/40 hover:bg-card/60 hover:border-gold/25 p-4 md:p-5 transition-all duration-300 animate-fade-in opacity-0"
+            >
+              <Avatar className="h-14 w-14 md:h-16 md:w-16 shrink-0 border-2 border-gold/20 shadow-lg">
+                {profile.avatarUrl ? (
+                  <AvatarImage src={profile.avatarUrl} alt="" className="object-cover" />
+                ) : null}
+                <AvatarFallback className="bg-gold/15 text-gold text-lg font-semibold">
+                  {profileInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-[10px] md:text-xs uppercase tracking-widest text-gold/70">
+                  Your profile
+                </p>
+                <p className="text-lg md:text-xl font-semibold text-foreground truncate group-hover:text-gold transition-colors">
+                  {profile.displayName}
+                </p>
+                {profile.bio ? (
+                  <p className="text-sm text-muted-foreground line-clamp-2 leading-snug">
+                    {profile.bio}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground/70 italic">
+                    Add a bio on your profile
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="w-5 h-5 shrink-0 text-muted-foreground group-hover:text-gold group-hover:translate-x-0.5 transition-all" />
+            </Link>
           )}
 
           <VideoRow title="Trending this week" videos={TRENDING} />
