@@ -8,13 +8,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "exclude": [
+    } 
+  },
+  "exclude": [
     "node_modules",
     "**/_tests_/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "src/test/**"
   ]
-  }
 }
