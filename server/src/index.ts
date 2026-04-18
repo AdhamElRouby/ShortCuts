@@ -1,17 +1,20 @@
 // Must run before any module that reads process.env (e.g. db/supabase).
 import 'dotenv/config';
-
 import express from 'express';
 import { errorHandler } from './middleware/errorHandler';
+import cors from 'cors';
+import corsOptions from './config/corsOptions';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import authRouter from './routes/authRoutes';
 import userRouter from './routes/userRoutes';
 import videoRouter from './routes/videoRoutes';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ============= Middleware Setup =============
+// Enable CORS with custom options
+app.use(cors(corsOptions));
 // Parse incoming JSON and URL-encoded request bodies
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
