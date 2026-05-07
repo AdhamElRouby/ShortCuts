@@ -18,6 +18,12 @@ function parseLimit(value: unknown): number {
   return Math.min(limit, MAX_TOP_CHANNEL_LIMIT);
 }
 
+function averageScore(ratings: { score: number }[]): number {
+  if (ratings.length === 0) return 0;
+  const total = ratings.reduce((sum, rating) => sum + rating.score, 0);
+  return total / ratings.length;
+}
+
 export const getUserProfile = async (req: Request, res: Response) => {
   const userId = req.params.userId as string;
   assertUuid(userId);
@@ -362,4 +368,108 @@ export const clearWatchHistory = async (req: Request, res: Response) => {
   });
 
   res.status(200).json({ cleared: true });
+};
+
+export const getWatchlist = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const rows = await prisma.watchlist.findMany({
+    where: { userId: viewerId },
+    orderBy: { addedAt: 'desc' },
+    include: {
+      video: {
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          cloudinaryId: true,
+          thumbnailUrl: true,
+          duration: true,
+          genre: true,
+          createdAt: true,
+          creator: {
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+          ratings: { select: { score: true } },
+        },
+      },
+    },
+  });
+
+  res.status(200).json(
+    rows.map((entry) => ({
+      userId: entry.userId,
+      videoId: entry.videoId,
+      addedAt: entry.addedAt,
+      video: {
+        id: entry.video.id,
+        title: entry.video.title,
+        description: entry.video.description,
+        cloudinaryId: entry.video.cloudinaryId,
+        thumbnailUrl: entry.video.thumbnailUrl,
+        duration: entry.video.duration,
+        genre: entry.video.genre,
+        createdAt: entry.video.createdAt,
+        averageRating: averageScore(entry.video.ratings),
+        creator: {
+          id: entry.video.creator.id,
+          name: entry.video.creator.displayName,
+          avatarUrl: entry.video.creator.avatarUrl,
+        },
+      },
+    })),
+  );
+};
+
+export const addToWatchlist = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const videoId = req.params.videoId as string;
+  if (!UUID_RE.test(videoId)) {
+    throw new CustomAPIError('Video not found', 404);
+  }
+
+  const video = await prisma.video.findUnique({
+    where: { id: videoId },
+    select: { id: true, isPublic: true, creatorId: true },
+  });
+
+  if (!video || (!video.isPublic && video.creatorId !== viewerId)) {
+    throw new CustomAPIError('Video not found', 404);
+  }
+
+  const row = await prisma.watchlist.upsert({
+    where: { userId_videoId: { userId: viewerId, videoId } },
+    create: { userId: viewerId, videoId },
+    update: {},
+  });
+
+  res.status(200).json({
+    userId: row.userId,
+    videoId: row.videoId,
+    addedAt: row.addedAt,
+    saved: true,
+  });
+};
+
+export const removeFromWatchlist = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const videoId = req.params.videoId as string;
+  if (!UUID_RE.test(videoId)) {
+    throw new CustomAPIError('Video not found', 404);
+  }
+
+  await prisma.watchlist.deleteMany({
+    where: { userId: viewerId, videoId },
+  });
+
+  res.status(200).json({ removed: true });
 };

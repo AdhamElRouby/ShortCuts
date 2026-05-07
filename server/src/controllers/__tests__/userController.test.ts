@@ -25,6 +25,11 @@ jest.mock('../../db/prisma', () => ({
       update: jest.fn(),
       deleteMany: jest.fn(),
     },
+    watchlist: {
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+      deleteMany: jest.fn(),
+    },
   },
 }));
 
@@ -465,5 +470,93 @@ describe('DELETE /api/users/history', () => {
   it('returns 401 without token', async () => {
     const res = await request(app).delete('/api/users/history');
     expect(res.status).toBe(401);
+  });
+});
+
+// ── watchlist ──────────────────────────────────────────────────────────────────
+
+describe('GET /api/users/watchlist', () => {
+  it('returns watchlist entries ordered by addedAt desc', async () => {
+    setAuth();
+    (prisma.watchlist.findMany as jest.Mock).mockResolvedValue([
+      {
+        userId: USER_ID,
+        videoId: 'video-2',
+        addedAt: new Date('2026-05-07T22:00:00.000Z'),
+        video: {
+          id: 'video-2',
+          title: 'Video 2',
+          description: null,
+          cloudinaryId: 'videos/2',
+          thumbnailUrl: null,
+          duration: 55,
+          genre: 'action',
+          createdAt: new Date('2026-05-06T20:00:00.000Z'),
+          creator: { id: CHANNEL_ID, displayName: 'Creator', avatarUrl: null },
+          ratings: [{ score: 4 }, { score: 5 }],
+        },
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/users/watchlist')
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].video.averageRating).toBe(4.5);
+    expect(res.body[0].video.title).toBe('Video 2');
+  });
+});
+
+describe('POST /api/users/watchlist/:videoId', () => {
+  it('saves video to watchlist idempotently', async () => {
+    setAuth();
+    (prisma.video.findUnique as jest.Mock).mockResolvedValue({
+      id: VIDEO_ID,
+      isPublic: true,
+      creatorId: CHANNEL_ID,
+    });
+    (prisma.watchlist.upsert as jest.Mock).mockResolvedValue({
+      userId: USER_ID,
+      videoId: VIDEO_ID,
+      addedAt: new Date('2026-05-07T22:10:00.000Z'),
+    });
+
+    const res = await request(app)
+      .post(`/api/users/watchlist/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(200);
+    expect(res.body.saved).toBe(true);
+    expect(prisma.watchlist.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 when video does not exist', async () => {
+    setAuth();
+    (prisma.video.findUnique as jest.Mock).mockResolvedValue(null);
+
+    const res = await request(app)
+      .post(`/api/users/watchlist/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/users/watchlist/:videoId', () => {
+  it('removes video from watchlist', async () => {
+    setAuth();
+    (prisma.watchlist.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
+
+    const res = await request(app)
+      .delete(`/api/users/watchlist/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(200);
+    expect(res.body.removed).toBe(true);
+    expect(prisma.watchlist.deleteMany).toHaveBeenCalledWith({
+      where: { userId: USER_ID, videoId: VIDEO_ID },
+    });
   });
 });
