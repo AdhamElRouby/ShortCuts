@@ -37,6 +37,13 @@ export const getChannels = async (): Promise<ChannelInfo[]> => {
   const { data } = await axiosInstance.get<ChannelInfo[]>('/users');
   return data;
 };
+
+export const getTopChannels = async (limit = 5): Promise<ChannelInfo[]> => {
+  const { data } = await axiosInstance.get<ChannelInfo[]>('/users/top', {
+    params: { limit },
+  });
+  return data;
+};
 export const getUserProfile = async (
   userId: string,
 ): Promise<PublicProfile> => {

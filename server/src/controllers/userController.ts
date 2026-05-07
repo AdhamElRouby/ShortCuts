@@ -3,11 +3,19 @@ import { prisma } from '../db/prisma';
 import CustomAPIError from '../errors/CustomAPIError';
 
 const UUID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+const DEFAULT_TOP_CHANNEL_LIMIT = 5;
+const MAX_TOP_CHANNEL_LIMIT = 20;
 
 function assertUuid(id: string): void {
   if (!UUID_RE.test(id)) {
     throw new CustomAPIError('User not found', 404);
   }
+}
+
+function parseLimit(value: unknown): number {
+  const limit = Number(value ?? DEFAULT_TOP_CHANNEL_LIMIT);
+  if (!Number.isInteger(limit) || limit < 1) return DEFAULT_TOP_CHANNEL_LIMIT;
+  return Math.min(limit, MAX_TOP_CHANNEL_LIMIT);
 }
 
 export const getUserProfile = async (req: Request, res: Response) => {
@@ -118,6 +126,49 @@ export const getChannels = async (req: Request, res: Response) => {
 
   res.status(200).json(channels);
 };
+
+export const getTopChannels = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  const limit = parseLimit(req.query.limit);
+
+  const profiles = await prisma.userProfile.findMany({
+    include: {
+      _count: { select: { subscribers: true } },
+    },
+  });
+
+  const topProfiles = profiles
+    .sort((a, b) => b._count.subscribers - a._count.subscribers)
+    .slice(0, limit);
+
+  const channels = await Promise.all(
+    topProfiles.map(async (profile) => {
+      const isSubscribed = viewerId
+        ? Boolean(
+            await prisma.subscription.findUnique({
+              where: {
+                subscriberId_channelId: {
+                  subscriberId: viewerId,
+                  channelId: profile.id,
+                },
+              },
+            }),
+          )
+        : false;
+
+      return {
+        id: profile.id,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        subscriberCount: profile._count.subscribers,
+        isSubscribed,
+      };
+    }),
+  );
+
+  res.status(200).json(channels);
+};
+
 export const subscribeToUser = async (req: Request, res: Response) => {
   const viewerId = req.user?.id;
   if (!viewerId) throw new CustomAPIError('Unauthorized', 401);

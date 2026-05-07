@@ -1,20 +1,22 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Play, Plus, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Play, Plus, Star } from 'lucide-react';
 import Navbar from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
+import { getThumbnailUrl, getVideos, type VideoSummary } from '@/api/video';
+import { getTopChannels, type ChannelInfo } from '@/api/user';
 
-// PLACEHOLDER: Replace with real data from videos API when video listing is implemented
 interface HomeVideo {
   id: string;
   title: string;
   creator: string;
   duration: string;
   rating: number;
-  thumbnail: string;
+  thumbnail: string | null;
   genre: string;
+  description: string | null;
 }
 
 const GRADIENT_BY_GENRE: Record<string, string> = {
@@ -28,42 +30,30 @@ const GRADIENT_BY_GENRE: Record<string, string> = {
   Romance: 'from-pink-900/80 via-rose-900/40 to-zinc-900',
 };
 
-const FEATURED: HomeVideo = {
-  id: 'featured-1',
-  title: 'The Last Light',
-  creator: 'Ava Moreno',
-  duration: '12:34',
-  rating: 4.8,
-  thumbnail: '',
-  genre: 'Drama',
-};
+function formatDuration(seconds: number | null): string {
+  if (seconds == null) return '--:--';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
 
-const TRENDING: HomeVideo[] = [
-  { id: 't1', title: 'Static Hour', creator: 'Kai Chen', duration: '08:22', rating: 4.6, thumbnail: '', genre: 'Thriller' },
-  { id: 't2', title: 'Paper Moons', creator: 'Ines Duval', duration: '14:02', rating: 4.9, thumbnail: '', genre: 'Animation' },
-  { id: 't3', title: 'Copper Sky', creator: 'Rami Azad', duration: '09:47', rating: 4.4, thumbnail: '', genre: 'Drama' },
-  { id: 't4', title: 'Under Glass', creator: 'Nora Kim', duration: '11:18', rating: 4.7, thumbnail: '', genre: 'Documentary' },
-  { id: 't5', title: 'Neon Rooms', creator: 'Leo Park', duration: '07:55', rating: 4.3, thumbnail: '', genre: 'Sci-Fi' },
-  { id: 't6', title: 'Quiet Mouths', creator: 'Sana El-Hadi', duration: '10:09', rating: 4.5, thumbnail: '', genre: 'Drama' },
-];
+function formatGenre(genre: string): string {
+  if (genre === 'scifi') return 'Sci-Fi';
+  return genre.charAt(0).toUpperCase() + genre.slice(1);
+}
 
-const NEW_RELEASES: HomeVideo[] = [
-  { id: 'n1', title: 'Small Wildfires', creator: 'Jude Okafor', duration: '13:40', rating: 4.2, thumbnail: '', genre: 'Drama' },
-  { id: 'n2', title: 'Tideline', creator: 'Mira Haj', duration: '06:28', rating: 4.1, thumbnail: '', genre: 'Romance' },
-  { id: 'n3', title: 'The Night Shift', creator: 'Owen Reyes', duration: '09:01', rating: 4.0, thumbnail: '', genre: 'Horror' },
-  { id: 'n4', title: 'Bright Lines', creator: 'Ada Petrov', duration: '12:12', rating: 4.6, thumbnail: '', genre: 'Comedy' },
-  { id: 'n5', title: 'Salt & Iron', creator: 'Hana Soto', duration: '15:33', rating: 4.8, thumbnail: '', genre: 'Thriller' },
-  { id: 'n6', title: 'Slow Dawn', creator: 'Tom Abel', duration: '08:44', rating: 4.3, thumbnail: '', genre: 'Animation' },
-];
-
-const STAFF_PICKS: HomeVideo[] = [
-  { id: 's1', title: 'Hollow Hours', creator: 'Yui Tanaka', duration: '11:55', rating: 4.9, thumbnail: '', genre: 'Drama' },
-  { id: 's2', title: 'Rough Cuts', creator: 'Elio Marques', duration: '07:10', rating: 4.7, thumbnail: '', genre: 'Documentary' },
-  { id: 's3', title: 'Polaroids', creator: 'Priya Rao', duration: '09:29', rating: 4.8, thumbnail: '', genre: 'Romance' },
-  { id: 's4', title: 'Blue Corridor', creator: 'Dex Alvarez', duration: '10:47', rating: 4.6, thumbnail: '', genre: 'Sci-Fi' },
-  { id: 's5', title: 'Dust Parade', creator: 'Mina Oren', duration: '13:02', rating: 4.5, thumbnail: '', genre: 'Drama' },
-  { id: 's6', title: 'Close Quarters', creator: 'Ben Holt', duration: '08:33', rating: 4.4, thumbnail: '', genre: 'Thriller' },
-];
+function toHomeVideo(video: VideoSummary): HomeVideo {
+  return {
+    id: video.id,
+    title: video.title,
+    creator: video.creator.name,
+    duration: formatDuration(video.duration),
+    rating: video.averageRating,
+    thumbnail: getThumbnailUrl(video.cloudinaryId, video.thumbnailUrl),
+    genre: formatGenre(video.genre),
+    description: video.description,
+  };
+}
 
 function VideoCard({ video }: { video: HomeVideo }) {
   const gradient = GRADIENT_BY_GENRE[video.genre] ?? 'from-zinc-800 to-zinc-900';
@@ -75,6 +65,13 @@ function VideoCard({ video }: { video: HomeVideo }) {
     >
       {/* Thumbnail */}
       <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
+        {video.thumbnail ? (
+          <img
+            src={video.thumbnail}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : null}
         <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_60%)]" />
         <div className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-medium tabular-nums text-white/90">
           {video.duration}
@@ -166,6 +163,13 @@ function Hero({ video }: { video: HomeVideo }) {
     <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
       {/* Background */}
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+      {video.thumbnail ? (
+        <img
+          src={video.thumbnail}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-55"
+        />
+      ) : null}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.12),transparent_55%)]" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-background/80 via-background/30 to-transparent" />
@@ -197,8 +201,8 @@ function Hero({ video }: { video: HomeVideo }) {
             </div>
 
             <p className="text-base md:text-lg text-foreground/80 leading-relaxed">
-              A quiet dinner becomes a reckoning. One evening, one table, and the
-              things finally said out loud.
+              {video.description ??
+                'Discover a new short film from the ShortCuts community.'}
             </p>
 
             <div className="flex items-center gap-3 pt-2">
@@ -223,8 +227,52 @@ function Hero({ video }: { video: HomeVideo }) {
   );
 }
 
+function TopChannels({ channels }: { channels: ChannelInfo[] }) {
+  if (channels.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+        <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+          Top channels
+        </span>
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {channels.map((channel) => (
+          <Link
+            key={channel.id}
+            to={`/profile/${channel.id}`}
+            className="group flex items-center gap-3 rounded-lg border border-white/[0.06] bg-card/40 p-3 transition-all duration-300 hover:border-gold/35 hover:bg-card/60"
+          >
+            <Avatar className="h-11 w-11 shrink-0 border border-gold/20">
+              <AvatarImage src={channel.avatarUrl ?? ''} className="object-cover" />
+              <AvatarFallback className="bg-gold/10 text-sm font-semibold text-gold">
+                {channel.displayName[0]?.toUpperCase() ?? '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground group-hover:text-gold">
+                {channel.displayName}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                <span className="tabular-nums text-gold/80">
+                  {channel.subscriberCount}
+                </span>{' '}
+                subscribers
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Home() {
   const { user, profile } = useAuth();
+  const [videos, setVideos] = useState<HomeVideo[]>([]);
+  const [channels, setChannels] = useState<ChannelInfo[]>([]);
+  const [loadingContent, setLoadingContent] = useState(true);
   const firstName = profile?.displayName?.split(' ')[0];
 
   const profileInitials =
@@ -236,12 +284,54 @@ function Home() {
       .join('')
       .toUpperCase() || 'U';
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHomeContent = async () => {
+      try {
+        const [videoData, channelData] = await Promise.all([
+          getVideos(18),
+          getTopChannels(5),
+        ]);
+
+        if (!isMounted) return;
+        setVideos(videoData.map(toHomeVideo));
+        setChannels(channelData);
+      } catch (err) {
+        console.error('Failed to load home content:', err);
+      } finally {
+        if (isMounted) setLoadingContent(false);
+      }
+    };
+
+    loadHomeContent();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const featured = videos[0];
+  const trending = videos.slice(0, 6);
+  const newReleases = videos.slice(6, 12);
+  const moreToWatch = videos.slice(12, 18);
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="pb-20">
-        <Hero video={FEATURED} />
+        {featured ? (
+          <Hero video={featured} />
+        ) : (
+          <div className="flex h-[70vh] min-h-[480px] items-center justify-center bg-gradient-to-br from-zinc-900 to-background pt-16">
+            {loadingContent ? (
+              <Loader2 className="h-9 w-9 animate-spin text-gold" />
+            ) : (
+              <p className="text-muted-foreground">No videos available yet.</p>
+            )}
+          </div>
+        )}
 
         <div className="max-w-[1600px] mx-auto px-4 md:px-8 mt-8 md:mt-10 space-y-10">
           {firstName && (
@@ -289,9 +379,16 @@ function Home() {
             </Link>
           )}
 
-          <VideoRow title="Trending this week" videos={TRENDING} />
-          <VideoRow title="New releases" videos={NEW_RELEASES} />
-          <VideoRow title="Staff picks" videos={STAFF_PICKS} />
+          <TopChannels channels={channels} />
+          {trending.length > 0 && (
+            <VideoRow title="Trending this week" videos={trending} />
+          )}
+          {newReleases.length > 0 && (
+            <VideoRow title="New releases" videos={newReleases} />
+          )}
+          {moreToWatch.length > 0 && (
+            <VideoRow title="More to watch" videos={moreToWatch} />
+          )}
         </div>
       </main>
     </div>

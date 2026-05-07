@@ -9,6 +9,7 @@ import Loading from '@/pages/Loading/Loading';
 import WatchPage from '@/pages/Watch/Watch';
 import Profile from '@/pages/Profile/Profile';
 import Channels from '@/pages/Channels/Channels';
+import SearchPage from '@/pages/Search/Search';
 import ProtectedRoute from '@/components/ProtectedRoute/ProtectedRoute';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/video/:videoId" element={<WatchPage />} />
         <Route path="/profile/:userId" element={<Profile />} />
         <Route path="/channels" element={<Channels />} />
+        <Route path="/search" element={<SearchPage />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

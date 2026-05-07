@@ -8,6 +8,7 @@ import { notFoundHandler } from './middleware/notFoundHandler';
 import authRouter from './routes/authRoutes';
 import userRouter from './routes/userRoutes';
 import videoRouter from './routes/videoRoutes';
+import searchRouter from './routes/searchRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/videos', videoRouter);
+app.use('/api/search', searchRouter);
 
 // ============= Error Handling Middleware =============
 // Handle 404 routes not found

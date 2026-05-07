@@ -4,6 +4,7 @@ import { authenticateUser } from '../middleware/authenticateUser';
 import { optionalAuthenticateUser } from '../middleware/optionalAuthenticateUser';
 import {
   uploadVideo,
+  getVideos,
   getVideoById,
   getVideoComments,
   postVideoComment,
@@ -18,6 +19,7 @@ const upload = multer({
 });
 
 // Specific routes before `/:videoId` (same path prefix)
+router.get('/', optionalAuthenticateUser, getVideos);
 router.get('/:videoId/comments', optionalAuthenticateUser, getVideoComments);
 router.post('/:videoId/comments', authenticateUser, postVideoComment);
 router.post('/:videoId/ratings', authenticateUser, upsertVideoRating);

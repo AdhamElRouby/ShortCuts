@@ -7,6 +7,8 @@ import { Genre } from '../generated/prisma/enums';
 const VALID_GENRES = Object.values(Genre) as string[];
 
 const UUID_RE = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+const DEFAULT_VIDEO_LIMIT = 12;
+const MAX_VIDEO_LIMIT = 50;
 
 function assertVideoUuid(id: string): void {
   if (!UUID_RE.test(id)) {
@@ -20,6 +22,51 @@ function canViewVideo(
 ): boolean {
   return video.isPublic || viewerId === video.creatorId;
 }
+
+function parseLimit(value: unknown): number {
+  const limit = Number(value ?? DEFAULT_VIDEO_LIMIT);
+  if (!Number.isInteger(limit) || limit < 1) return DEFAULT_VIDEO_LIMIT;
+  return Math.min(limit, MAX_VIDEO_LIMIT);
+}
+
+function averageScore(ratings: { score: number }[]): number {
+  if (ratings.length === 0) return 0;
+  const total = ratings.reduce((sum, rating) => sum + rating.score, 0);
+  return total / ratings.length;
+}
+
+export const getVideos = async (req: Request, res: Response) => {
+  const limit = parseLimit(req.query.limit);
+
+  const videos = await prisma.video.findMany({
+    where: { isPublic: true },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      creator: { select: { id: true, displayName: true, avatarUrl: true } },
+      ratings: { select: { score: true } },
+    },
+  });
+
+  res.status(200).json(
+    videos.map((video) => ({
+      id: video.id,
+      title: video.title,
+      description: video.description,
+      cloudinaryId: video.cloudinaryId,
+      thumbnailUrl: video.thumbnailUrl,
+      duration: video.duration,
+      genre: video.genre,
+      createdAt: video.createdAt,
+      averageRating: averageScore(video.ratings),
+      creator: {
+        id: video.creator.id,
+        name: video.creator.displayName,
+        avatarUrl: video.creator.avatarUrl,
+      },
+    })),
+  );
+};
 
 export const getVideoById = async (req: Request, res: Response) => {
   const videoId = req.params.videoId as string;
