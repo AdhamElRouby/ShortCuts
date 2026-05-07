@@ -38,7 +38,12 @@ function Login() {
     e.preventDefault();
     setSignInError('');
     setSignInLoading(true);
-
+    // basic client-side email format check
+    if (!signInEmail.includes('@')) {
+      setSignInError('Please enter a valid email address');
+      setSignInLoading(false);
+      return;
+    }
     try {
       await signIn(signInEmail, signInPassword);
     } catch (err: unknown) {
@@ -52,7 +57,11 @@ function Login() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignUpError('');
-
+    // basic client-side email format check
+    if (!signUpEmail.includes('@')) {
+      setSignUpError('Please enter a valid email address');
+      return;
+    }
     if (signUpPassword !== signUpConfirm) {
       setSignUpError('Passwords do not match');
       return;
@@ -142,7 +151,10 @@ function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password" className="text-foreground/80">
+                  <Label
+                    htmlFor="signin-password"
+                    className="text-foreground/80"
+                  >
                     Password
                   </Label>
                   <div className="relative">
@@ -160,7 +172,11 @@ function Login() {
                       onClick={() => setShowSignInPassword(!showSignInPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-gold/70 transition-colors cursor-pointer"
                     >
-                      {showSignInPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSignInPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -222,7 +238,10 @@ function Login() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-foreground/80">
+                  <Label
+                    htmlFor="signup-password"
+                    className="text-foreground/80"
+                  >
                     Password
                   </Label>
                   <div className="relative">
@@ -240,13 +259,20 @@ function Login() {
                       onClick={() => setShowSignUpPassword(!showSignUpPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-gold/70 transition-colors cursor-pointer"
                     >
-                      {showSignUpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSignUpPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm" className="text-foreground/80">
+                  <Label
+                    htmlFor="signup-confirm"
+                    className="text-foreground/80"
+                  >
                     Confirm Password
                   </Label>
                   <div className="relative">
@@ -264,7 +290,11 @@ function Login() {
                       onClick={() => setShowSignUpConfirm(!showSignUpConfirm)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-gold/70 transition-colors cursor-pointer"
                     >
-                      {showSignUpConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSignUpConfirm ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -287,7 +317,9 @@ function Login() {
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="text-muted-foreground/40 text-xs uppercase tracking-wider">or</span>
+            <span className="text-muted-foreground/40 text-xs uppercase tracking-wider">
+              or
+            </span>
             <div className="h-px flex-1 bg-white/[0.06]" />
           </div>
 
@@ -300,7 +332,8 @@ function Login() {
               try {
                 await signInWithGoogle();
               } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : 'Google sign in failed';
+                const message =
+                  err instanceof Error ? err.message : 'Google sign in failed';
                 setGoogleError(message);
                 setGoogleLoading(false);
               }
@@ -331,7 +364,9 @@ function Login() {
           </Button>
 
           {googleError && (
-            <p className="text-sm text-destructive text-center mt-2">{googleError}</p>
+            <p className="text-sm text-destructive text-center mt-2">
+              {googleError}
+            </p>
           )}
         </div>
 

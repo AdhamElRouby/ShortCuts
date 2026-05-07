@@ -50,11 +50,14 @@ function Profile() {
   const [editDisplayName, setEditDisplayName] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(
+    null,
+  );
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadTitleError, setUploadTitleError] = useState<string | null>(null);
   const [uploadDescription, setUploadDescription] = useState('');
   const [uploadGenre, setUploadGenre] = useState<string>(VIDEO_GENRES[0]);
   const [uploadVideoFile, setUploadVideoFile] = useState<File | null>(null);
@@ -122,8 +125,15 @@ function Profile() {
 
   const handleUploadVideo = async (e: React.FormEvent) => {
     e.preventDefault();
+    const TITLE_MAX = 100;
+    setUploadTitleError(null);
     if (!uploadVideoFile || !uploadTitle.trim()) {
       toast.error('Video file and title are required');
+      return;
+    }
+
+    if (uploadTitle.trim().length > TITLE_MAX) {
+      setUploadTitleError(`Title must be at most ${TITLE_MAX} characters`);
       return;
     }
     setUploading(true);
@@ -132,7 +142,8 @@ function Profile() {
       const fd = new FormData();
       fd.append('video', uploadVideoFile);
       fd.append('title', uploadTitle.trim());
-      if (uploadDescription.trim()) fd.append('description', uploadDescription.trim());
+      if (uploadDescription.trim())
+        fd.append('description', uploadDescription.trim());
       fd.append('genre', uploadGenre);
       fd.append('isPublic', uploadPublic ? 'true' : 'false');
       if (uploadThumbFile) fd.append('thumbnail', uploadThumbFile);
@@ -183,9 +194,7 @@ function Profile() {
   };
 
   if (loading) {
-    return (
-      <Loading />
-    );
+    return <Loading />;
   }
 
   if (loadError || !data) {
@@ -194,7 +203,11 @@ function Profile() {
         <Navbar />
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 pt-16">
           <p className="text-muted-foreground">{loadError ?? 'Not found'}</p>
-          <Button asChild variant="outline" className="border-white/10 hover:border-gold/30 hover:text-gold">
+          <Button
+            asChild
+            variant="outline"
+            className="border-white/10 hover:border-gold/30 hover:text-gold"
+          >
             <Link to="/">Back home</Link>
           </Button>
         </div>
@@ -249,11 +262,15 @@ function Profile() {
                 </h1>
                 <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                   <span>
-                    <span className="font-medium tabular-nums text-gold">{data.subscriberCount}</span>{' '}
+                    <span className="font-medium tabular-nums text-gold">
+                      {data.subscriberCount}
+                    </span>{' '}
                     subscribers
                   </span>
                   <span>
-                    <span className="font-medium tabular-nums text-gold">{data.subscriptionCount}</span>{' '}
+                    <span className="font-medium tabular-nums text-gold">
+                      {data.subscriptionCount}
+                    </span>{' '}
                     subscriptions
                   </span>
                 </div>
@@ -264,7 +281,9 @@ function Profile() {
                   {data.bio}
                 </p>
               ) : (
-                <p className="text-sm italic text-muted-foreground/70">No bio yet.</p>
+                <p className="text-sm italic text-muted-foreground/70">
+                  No bio yet.
+                </p>
               )}
 
               <div className="flex flex-wrap gap-3 pt-1">
@@ -345,7 +364,8 @@ function Profile() {
                     </p>
                     {v.duration != null && (
                       <p className="text-xs tabular-nums text-muted-foreground">
-                        {Math.floor(v.duration / 60)}:{String(v.duration % 60).padStart(2, '0')}
+                        {Math.floor(v.duration / 60)}:
+                        {String(v.duration % 60).padStart(2, '0')}
                       </p>
                     )}
                   </div>
@@ -361,7 +381,9 @@ function Profile() {
           <form onSubmit={handleSaveProfile}>
             <DialogHeader>
               <DialogTitle>Edit profile</DialogTitle>
-              <DialogDescription>Update how you appear to others on ShortCuts.</DialogDescription>
+              <DialogDescription>
+                Update how you appear to others on ShortCuts.
+              </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="flex items-center gap-4">
@@ -372,7 +394,10 @@ function Profile() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <Label htmlFor="avatar" className="text-xs text-muted-foreground">
+                  <Label
+                    htmlFor="avatar"
+                    className="text-xs text-muted-foreground"
+                  >
                     Profile photo
                   </Label>
                   <Input
@@ -406,24 +431,40 @@ function Profile() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={savingProfile} className="bg-gold text-background hover:bg-gold-light">
-                {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+              <Button
+                type="submit"
+                disabled={savingProfile}
+                className="bg-gold text-background hover:bg-gold-light"
+              >
+                {savingProfile ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Save'
+                )}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={uploadOpen} onOpenChange={(o) => !uploading && setUploadOpen(o)}>
+      <Dialog
+        open={uploadOpen}
+        onOpenChange={(o) => !uploading && setUploadOpen(o)}
+      >
         <DialogContent className="max-h-[90vh] overflow-y-auto border-white/[0.08] bg-popover/95 backdrop-blur-md sm:max-w-lg">
           <form onSubmit={handleUploadVideo}>
             <DialogHeader>
               <DialogTitle>Upload video</DialogTitle>
               <DialogDescription>
-                Add a short film to your channel. Large files may take a few minutes.
+                Add a short film to your channel. Large files may take a few
+                minutes.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -435,7 +476,9 @@ function Profile() {
                   accept="video/*"
                   required
                   className="cursor-pointer"
-                  onChange={(e) => setUploadVideoFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) =>
+                    setUploadVideoFile(e.target.files?.[0] ?? null)
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -443,10 +486,20 @@ function Profile() {
                 <Input
                   id="vtitle"
                   value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
+                  onChange={(e) => {
+                    setUploadTitle(e.target.value);
+                    if (uploadTitleError) setUploadTitleError(null);
+                  }}
+                  maxLength={100}
                   required
                   className="bg-white/[0.04] border-white/10"
                 />
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-destructive">{uploadTitleError}</p>
+                  <p className="text-sm text-muted-foreground/70">
+                    {uploadTitle.length}/100
+                  </p>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vdesc">Description</Label>
@@ -480,14 +533,20 @@ function Profile() {
                   type="file"
                   accept="image/*"
                   className="cursor-pointer"
-                  onChange={(e) => setUploadThumbFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) =>
+                    setUploadThumbFile(e.target.files?.[0] ?? null)
+                  }
                 />
               </div>
               <div className="flex items-center justify-between gap-4 rounded-lg border border-white/10 px-3 py-2">
                 <Label htmlFor="pub" className="cursor-pointer">
                   Public listing
                 </Label>
-                <Switch id="pub" checked={uploadPublic} onCheckedChange={setUploadPublic} />
+                <Switch
+                  id="pub"
+                  checked={uploadPublic}
+                  onCheckedChange={setUploadPublic}
+                />
               </div>
               {uploading && (
                 <div className="space-y-1">
@@ -497,16 +556,31 @@ function Profile() {
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground tabular-nums">{uploadProgress}%</p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {uploadProgress}%
+                  </p>
                 </div>
               )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" disabled={uploading} onClick={() => setUploadOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={() => setUploadOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={uploading} className="bg-gold text-background hover:bg-gold-light">
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Upload'}
+              <Button
+                type="submit"
+                disabled={uploading}
+                className="bg-gold text-background hover:bg-gold-light"
+              >
+                {uploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  'Upload'
+                )}
               </Button>
             </DialogFooter>
           </form>
