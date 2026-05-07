@@ -55,13 +55,13 @@ export const getUserProfile = async (req: Request, res: Response) => {
       }),
       viewerId
         ? prisma.subscription.findUnique({
-            where: {
-              subscriberId_channelId: {
-                subscriberId: viewerId,
-                channelId: userId,
-              },
+          where: {
+            subscriberId_channelId: {
+              subscriberId: viewerId,
+              channelId: userId,
             },
-          })
+          },
+        })
         : Promise.resolve(null),
     ]);
 
@@ -102,15 +102,15 @@ export const getChannels = async (req: Request, res: Response) => {
 
         const isSubscribed = viewerId
           ? Boolean(
-              await prisma.subscription.findUnique({
-                where: {
-                  subscriberId_channelId: {
-                    subscriberId: viewerId,
-                    channelId: profile.id,
-                  },
+            await prisma.subscription.findUnique({
+              where: {
+                subscriberId_channelId: {
+                  subscriberId: viewerId,
+                  channelId: profile.id,
                 },
-              }),
-            )
+              },
+            }),
+          )
           : false;
 
         return {
@@ -174,15 +174,15 @@ export const getTopChannels = async (req: Request, res: Response) => {
     topProfiles.map(async (profile) => {
       const isSubscribed = viewerId
         ? Boolean(
-            await prisma.subscription.findUnique({
-              where: {
-                subscriberId_channelId: {
-                  subscriberId: viewerId,
-                  channelId: profile.id,
-                },
+          await prisma.subscription.findUnique({
+            where: {
+              subscriberId_channelId: {
+                subscriberId: viewerId,
+                channelId: profile.id,
               },
-            }),
-          )
+            },
+          }),
+        )
         : false;
 
       return {
