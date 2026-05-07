@@ -15,7 +15,15 @@ jest.mock('../../db/prisma', () => ({
       deleteMany: jest.fn(),
     },
     video: {
+      findUnique: jest.fn(),
       findMany: jest.fn(),
+    },
+    watchHistory: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      deleteMany: jest.fn(),
     },
   },
 }));
@@ -286,6 +294,176 @@ describe('DELETE /api/users/:userId/subscribe', () => {
 
   it('returns 401 without token', async () => {
     const res = await request(app).delete(`/api/users/${CHANNEL_ID}/subscribe`);
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── watchHistory ───────────────────────────────────────────────────────────────
+
+const VIDEO_ID = 'bbbbbbbb-0000-0000-0000-000000000001';
+
+describe('GET /api/users/history', () => {
+  it('returns watch history in reverse chronological order and deduped by video', async () => {
+    setAuth();
+
+    (prisma.watchHistory.findMany as jest.Mock).mockResolvedValue([
+      {
+        id: 'h3',
+        userId: USER_ID,
+        videoId: 'video-2',
+        watchedAt: new Date('2026-05-07T20:00:00.000Z'),
+        video: {
+          id: 'video-2',
+          title: 'Video 2',
+          cloudinaryId: 'videos/2',
+          thumbnailUrl: null,
+          duration: 45,
+          creator: { id: CHANNEL_ID, displayName: 'Creator 2' },
+        },
+      },
+      {
+        id: 'h2-latest',
+        userId: USER_ID,
+        videoId: 'video-1',
+        watchedAt: new Date('2026-05-07T19:00:00.000Z'),
+        video: {
+          id: 'video-1',
+          title: 'Video 1 latest',
+          cloudinaryId: 'videos/1',
+          thumbnailUrl: null,
+          duration: 60,
+          creator: { id: CHANNEL_ID, displayName: 'Creator 1' },
+        },
+      },
+      {
+        id: 'h1-old',
+        userId: USER_ID,
+        videoId: 'video-1',
+        watchedAt: new Date('2026-05-07T18:00:00.000Z'),
+        video: {
+          id: 'video-1',
+          title: 'Video 1 old',
+          cloudinaryId: 'videos/1',
+          thumbnailUrl: null,
+          duration: 60,
+          creator: { id: CHANNEL_ID, displayName: 'Creator 1' },
+        },
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/users/history')
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[0].video.id).toBe('video-2');
+    expect(res.body[1].video.id).toBe('video-1');
+    expect(res.body[1].id).toBe('h2-latest');
+  });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).get('/api/users/history');
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('POST /api/users/history/:videoId', () => {
+  it('creates a new history row when none exists', async () => {
+    setAuth();
+    (prisma.video.findUnique as jest.Mock).mockResolvedValue({
+      id: VIDEO_ID,
+      isPublic: true,
+      creatorId: CHANNEL_ID,
+    });
+    (prisma.watchHistory.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.watchHistory.create as jest.Mock).mockResolvedValue({
+      id: 'history-created',
+      watchedAt: new Date('2026-05-07T21:00:00.000Z'),
+    });
+    (prisma.watchHistory.deleteMany as jest.Mock).mockResolvedValue({ count: 0 });
+
+    const res = await request(app)
+      .post(`/api/users/history/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe('history-created');
+    expect(prisma.watchHistory.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates existing row and removes duplicate rows when already tracked', async () => {
+    setAuth();
+    (prisma.video.findUnique as jest.Mock).mockResolvedValue({
+      id: VIDEO_ID,
+      isPublic: true,
+      creatorId: CHANNEL_ID,
+    });
+    (prisma.watchHistory.findFirst as jest.Mock).mockResolvedValue({
+      id: 'history-existing',
+      userId: USER_ID,
+      videoId: VIDEO_ID,
+      watchedAt: new Date('2026-05-07T20:00:00.000Z'),
+    });
+    (prisma.watchHistory.update as jest.Mock).mockResolvedValue({
+      id: 'history-existing',
+      watchedAt: new Date('2026-05-07T21:00:00.000Z'),
+    });
+    (prisma.watchHistory.deleteMany as jest.Mock).mockResolvedValue({ count: 1 });
+
+    const res = await request(app)
+      .post(`/api/users/history/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(201);
+    expect(prisma.watchHistory.update).toHaveBeenCalledTimes(1);
+    expect(prisma.watchHistory.create).not.toHaveBeenCalled();
+    expect(prisma.watchHistory.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 for invalid UUID format', async () => {
+    setAuth();
+    const res = await request(app)
+      .post('/api/users/history/not-a-uuid')
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 when private video is not owned by viewer', async () => {
+    setAuth();
+    (prisma.video.findUnique as jest.Mock).mockResolvedValue({
+      id: VIDEO_ID,
+      isPublic: false,
+      creatorId: CHANNEL_ID,
+    });
+
+    const res = await request(app)
+      .post(`/api/users/history/${VIDEO_ID}`)
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/users/history', () => {
+  it('clears all watch history entries for the user', async () => {
+    setAuth();
+    (prisma.watchHistory.deleteMany as jest.Mock).mockResolvedValue({ count: 3 });
+
+    const res = await request(app)
+      .delete('/api/users/history')
+      .set('Authorization', 'Bearer token');
+
+    expect(res.status).toBe(200);
+    expect(res.body.cleared).toBe(true);
+    expect(prisma.watchHistory.deleteMany).toHaveBeenCalledWith({
+      where: { userId: USER_ID },
+    });
+  });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app).delete('/api/users/history');
     expect(res.status).toBe(401);
   });
 });

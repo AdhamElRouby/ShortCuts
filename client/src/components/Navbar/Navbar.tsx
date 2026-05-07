@@ -54,7 +54,9 @@ export default function Navbar() {
       .filter(Boolean)
       .slice(0, 2)
       .join('')
-      .toUpperCase() || 'U';
+      .toUpperCase() ||
+    user?.email?.[0]?.toUpperCase() ||
+    'U';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,81 +131,80 @@ export default function Navbar() {
               Search
             </Button>
           </form>
-        </div>
-
-        {/* Notifications + avatar */}
-        <div className="flex shrink-0 items-center gap-1 md:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="cursor-pointer text-muted-foreground hover:text-gold hover:bg-white/[0.04]"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="cursor-pointer rounded-full ring-2 ring-white/[0.08] transition-all duration-200 hover:ring-gold/35"
-                aria-label="Account menu"
-              >
-                <Avatar size="default" className="size-9">
-                  {profile?.avatarUrl ? (
-                    <AvatarImage src={profile.avatarUrl} alt={profile.displayName ?? ''} />
-                  ) : null}
-                  <AvatarFallback className="bg-gold/15 text-xs font-semibold text-gold">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="mt-1 w-56 border-white/[0.08] bg-popover/95 backdrop-blur-md"
+          {/* Notifications + avatar */}
+          <div className="flex shrink-0 items-center gap-1 md:gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="cursor-pointer text-muted-foreground hover:text-gold hover:bg-white/[0.04]"
+              aria-label="Notifications"
             >
-              <DropdownMenuLabel className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium text-foreground">
-                  {profile?.displayName ?? 'User'}
-                </span>
-                <span className="text-xs font-normal text-muted-foreground truncate">
-                  Welcome back
-                </span>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => user && navigate(`/profile/${user.id}`)}
-                disabled={!user}
-                className="cursor-pointer"
+              <Bell className="w-5 h-5" />
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="cursor-pointer rounded-full ring-2 ring-white/[0.08] transition-all duration-200 hover:ring-gold/35"
+                  aria-label="Account menu"
+                >
+                  <Avatar size="default" className="size-9">
+                    {profile?.avatarUrl ? (
+                      <AvatarImage src={profile.avatarUrl} alt={profile.displayName ?? ''} />
+                    ) : null}
+                    <AvatarFallback className="bg-gold/15 text-xs font-semibold text-gold">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="mt-1 w-56 border-white/[0.08] bg-popover/95 backdrop-blur-md"
               >
-                <User className="w-4 h-4 mr-2" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigate('/watchlist')}
-                className="cursor-pointer"
-              >
-                <Bookmark className="w-4 h-4 mr-2" />
-                My Watchlist
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigate('/history')}
-                className="cursor-pointer"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                Watch History
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={signOut}
-                className="cursor-pointer text-destructive focus:text-destructive"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuLabel className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">
+                    {profile?.displayName ?? user?.email ?? 'User'}
+                  </span>
+                  <span className="text-xs font-normal text-muted-foreground truncate">
+                    Welcome back
+                  </span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => user && navigate(`/profile/${user.id}`)}
+                  disabled={!user}
+                  className="cursor-pointer"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate('/watchlist')}
+                  className="cursor-pointer"
+                >
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  My Watchlist
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigate('/history')}
+                  className="cursor-pointer"
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Watch History
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={signOut}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 

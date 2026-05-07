@@ -15,6 +15,7 @@ import {
   getThumbnailUrl,
   getHlsUrl,
 } from '@/api/video';
+import { addWatchHistoryEntry } from '@/api/user';
 import Loading from '../Loading/Loading';
 
 interface Comment {
@@ -87,6 +88,15 @@ export default function WatchPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!videoId || !user) return;
+
+    // Non-blocking tracking for personalized watch history.
+    void addWatchHistoryEntry(videoId).catch((err) => {
+      console.error('Failed to add watch history entry:', err);
+    });
+  }, [videoId, user]);
 
   const handleRate = async (rating: number) => {
     if (!user || !video) return;
