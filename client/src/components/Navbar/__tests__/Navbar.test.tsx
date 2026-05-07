@@ -180,18 +180,17 @@ describe('Navbar — dropdown menu navigation', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/watchlist');
   });
 
-  it('clicking Creator Studio navigates to /studio', async () => {
+  it('clicking Watch History navigates to /history', async () => {
     const user = userEvent.setup();
     renderNavbar();
-    await user.click(screen.getByText('Creator Studio'));
-    expect(mockNavigate).toHaveBeenCalledWith('/studio');
+    await user.click(screen.getByText('Watch History'));
+    expect(mockNavigate).toHaveBeenCalledWith('/history');
   });
 
-  it('clicking Settings navigates to /settings', async () => {
-    const user = userEvent.setup();
+  it('does not show Creator Studio or Settings', () => {
     renderNavbar();
-    await user.click(screen.getByText('Settings'));
-    expect(mockNavigate).toHaveBeenCalledWith('/settings');
+    expect(screen.queryByText('Creator Studio')).not.toBeInTheDocument();
+    expect(screen.queryByText('Settings')).not.toBeInTheDocument();
   });
 
   it('clicking Sign out calls the signOut function from useAuth', async () => {

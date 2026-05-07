@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Bell, Bookmark, Film, LogOut, Search, Settings, User } from 'lucide-react';
+import { Bell, Bookmark, Clock, LogOut, Search, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,15 +104,25 @@ function Navbar() {
         </div>
 
         {/* Search — centered in remaining space */}
-        <form onSubmit={handleSearch} className="group relative min-w-0 flex-1">
+        <form
+          onSubmit={handleSearch}
+          className="group relative min-w-0 flex-1 md:mx-auto md:max-w-xl lg:max-w-2xl"
+        >
           <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground/60 transition-colors group-focus-within:text-gold/70" />
           <Input
             type="search"
             placeholder="Search short films, creators…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-9 w-full rounded-full border-white/[0.08] bg-white/[0.04] py-2 pl-9 pr-4 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-gold/40 focus-visible:ring-gold/20 md:h-10 md:max-w-xl md:mx-auto lg:max-w-2xl"
+            className="h-9 w-full rounded-full border-white/[0.08] bg-white/[0.04] py-2 pl-9 pr-20 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-gold/40 focus-visible:ring-gold/20 md:h-10"
           />
+          <Button
+            type="submit"
+            size="sm"
+            className="absolute right-1 top-1/2 h-7 -translate-y-1/2 rounded-full bg-gold px-3 text-xs font-semibold text-background hover:bg-gold-light"
+          >
+            Search
+          </Button>
         </form>
 
         {/* Notifications + avatar */}
@@ -172,18 +182,11 @@ function Navbar() {
                 My Watchlist
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={() => navigate('/studio')}
+                onClick={() => navigate('/history')}
                 className="cursor-pointer"
               >
-                <Film className="w-4 h-4 mr-2" />
-                Creator Studio
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => navigate('/settings')}
-                className="cursor-pointer"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
+                <Clock className="w-4 h-4 mr-2" />
+                Watch History
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
