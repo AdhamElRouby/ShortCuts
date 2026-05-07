@@ -124,7 +124,6 @@ export default function Navbar() {
               Search
             </Button>
           </form>
-
           <div className="flex shrink-0 items-center gap-1 md:gap-2">
             <Button
               variant="ghost"
