@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Loader2, Play, Plus, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Play, Plus, Star, Check } from 'lucide-react';
 import Navbar from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { getThumbnailUrl, getVideos, type VideoSummary } from '@/api/video';
-import { getTopChannels, type ChannelInfo } from '@/api/user';
+import { addToWatchlist, getTopChannels, getWatchlist, type ChannelInfo } from '@/api/user';
 
 interface HomeVideo {
   id: string;
@@ -105,6 +105,42 @@ function VideoCard({ video }: { video: HomeVideo }) {
   );
 }
 
+function WatchlistVideoCard({
+  video,
+  isSaved,
+  saving,
+  onSave,
+}: {
+  video: HomeVideo;
+  isSaved: boolean;
+  saving: boolean;
+  onSave: (video: HomeVideo) => void;
+}) {
+  return (
+    <div className="shrink-0 w-[260px] md:w-[300px] space-y-2">
+      <VideoCard video={video} />
+      <Button
+        type="button"
+        variant={isSaved ? 'outline' : 'default'}
+        onClick={() => onSave(video)}
+        disabled={isSaved || saving}
+        className={
+          isSaved
+            ? 'w-full border-white/15 bg-white/[0.02] text-gold'
+            : 'w-full bg-gold text-background hover:bg-gold-light'
+        }
+      >
+        {isSaved ? (
+          <Check className="mr-2 h-4 w-4" />
+        ) : (
+          <Plus className="mr-2 h-4 w-4" />
+        )}
+        {isSaved ? 'Saved to Watch List' : 'Save to Watch List'}
+      </Button>
+    </div>
+  );
+}
+
 function VideoRow({ title, videos }: { title: string; videos: HomeVideo[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -157,7 +193,89 @@ function VideoRow({ title, videos }: { title: string; videos: HomeVideo[] }) {
   );
 }
 
-function Hero({ video }: { video: HomeVideo }) {
+function SavableVideoRow({
+  title,
+  videos,
+  savedVideoIds,
+  savingVideoId,
+  onSave,
+}: {
+  title: string;
+  videos: HomeVideo[];
+  savedVideoIds: Set<string>;
+  savingVideoId: string | null;
+  onSave: (video: HomeVideo) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const amount = node.clientWidth * 0.8;
+    node.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl md:text-2xl font-semibold text-foreground">
+          <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            {title}
+          </span>
+        </h2>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('left')}
+            className="cursor-pointer text-muted-foreground hover:text-gold hover:bg-white/[0.04]"
+            aria-label={`Scroll ${title} left`}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => scroll('right')}
+            className="cursor-pointer text-muted-foreground hover:text-gold hover:bg-white/[0.04]"
+            aria-label={`Scroll ${title} right`}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </Button>
+        </div>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto scroll-smooth pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {videos.map((video) => (
+          <WatchlistVideoCard
+            key={video.id}
+            video={video}
+            isSaved={savedVideoIds.has(video.id)}
+            saving={savingVideoId === video.id}
+            onSave={onSave}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Hero({
+  video,
+  canSave,
+  isSaved,
+  saving,
+  onSave,
+}: {
+  video: HomeVideo;
+  canSave: boolean;
+  isSaved: boolean;
+  saving: boolean;
+  onSave: (video: HomeVideo) => void;
+}) {
   const gradient = GRADIENT_BY_GENRE[video.genre] ?? 'from-zinc-800 to-zinc-900';
   return (
     <div className="relative h-[70vh] min-h-[480px] w-full overflow-hidden">
@@ -214,10 +332,17 @@ function Hero({ video }: { video: HomeVideo }) {
               </Link>
               <Button
                 variant="outline"
+                type="button"
+                onClick={() => onSave(video)}
+                disabled={!canSave || isSaved || saving}
                 className="cursor-pointer border-white/20 bg-white/[0.06] backdrop-blur-sm hover:bg-white/[0.1] hover:border-gold/40 text-foreground font-medium px-6 transition-all duration-200"
               >
-                <Plus className="w-4 h-4 mr-2" />
-                My list
+                {isSaved ? (
+                  <Check className="w-4 h-4 mr-2" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-2" />
+                )}
+                {isSaved ? 'Saved to Watch List' : 'My list'}
               </Button>
             </div>
           </div>
@@ -271,6 +396,9 @@ function TopChannels({ channels }: { channels: ChannelInfo[] }) {
 function Home() {
   const { user, profile } = useAuth();
   const [videos, setVideos] = useState<HomeVideo[]>([]);
+  const [watchlistVideos, setWatchlistVideos] = useState<HomeVideo[]>([]);
+  const [savedVideoIds, setSavedVideoIds] = useState<Set<string>>(new Set());
+  const [savingVideoId, setSavingVideoId] = useState<string | null>(null);
   const [channels, setChannels] = useState<ChannelInfo[]>([]);
   const [loadingContent, setLoadingContent] = useState(true);
   const firstName = profile?.displayName?.split(' ')[0];
@@ -293,9 +421,31 @@ function Home() {
           getVideos(18),
           getTopChannels(5),
         ]);
+        const watchlistData = user ? await getWatchlist() : [];
 
         if (!isMounted) return;
         setVideos(videoData.map(toHomeVideo));
+        setWatchlistVideos(
+          watchlistData.map((entry) =>
+            toHomeVideo({
+              id: entry.video.id,
+              title: entry.video.title,
+              description: entry.video.description,
+              cloudinaryId: entry.video.cloudinaryId,
+              thumbnailUrl: entry.video.thumbnailUrl,
+              duration: entry.video.duration,
+              genre: entry.video.genre,
+              createdAt: entry.video.createdAt,
+              averageRating: entry.video.averageRating,
+              creator: {
+                id: entry.video.creator.id,
+                name: entry.video.creator.name,
+                avatarUrl: entry.video.creator.avatarUrl,
+              },
+            }),
+          ),
+        );
+        setSavedVideoIds(new Set(watchlistData.map((entry) => entry.videoId)));
         setChannels(channelData);
       } catch (err) {
         console.error('Failed to load home content:', err);
@@ -309,12 +459,29 @@ function Home() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user]);
 
   const featured = videos[0];
   const trending = videos.slice(0, 6);
   const newReleases = videos.slice(6, 12);
   const moreToWatch = videos.slice(12, 18);
+
+  const handleSaveToWatchlist = async (video: HomeVideo) => {
+    if (!user || savedVideoIds.has(video.id)) return;
+
+    setSavingVideoId(video.id);
+    try {
+      await addToWatchlist(video.id);
+      setSavedVideoIds((prev) => new Set(prev).add(video.id));
+      setWatchlistVideos((prev) =>
+        prev.some((item) => item.id === video.id) ? prev : [video, ...prev],
+      );
+    } catch (err) {
+      console.error('Failed to save to watchlist:', err);
+    } finally {
+      setSavingVideoId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -322,7 +489,13 @@ function Home() {
 
       <main className="pb-20">
         {featured ? (
-          <Hero video={featured} />
+          <Hero
+            video={featured}
+            canSave={Boolean(user)}
+            isSaved={savedVideoIds.has(featured.id)}
+            saving={savingVideoId === featured.id}
+            onSave={handleSaveToWatchlist}
+          />
         ) : (
           <div className="flex h-[70vh] min-h-[480px] items-center justify-center bg-gradient-to-br from-zinc-900 to-background pt-16">
             {loadingContent ? (
@@ -380,15 +553,45 @@ function Home() {
           )}
 
           <TopChannels channels={channels} />
-          {trending.length > 0 && (
-            <VideoRow title="Trending this week" videos={trending} />
+          {watchlistVideos.length > 0 && (
+            <VideoRow title="Your watch list" videos={watchlistVideos} />
           )}
-          {newReleases.length > 0 && (
-            <VideoRow title="New releases" videos={newReleases} />
-          )}
-          {moreToWatch.length > 0 && (
-            <VideoRow title="More to watch" videos={moreToWatch} />
-          )}
+          {trending.length > 0 &&
+            (user ? (
+              <SavableVideoRow
+                title="Trending this week"
+                videos={trending}
+                savedVideoIds={savedVideoIds}
+                savingVideoId={savingVideoId}
+                onSave={handleSaveToWatchlist}
+              />
+            ) : (
+              <VideoRow title="Trending this week" videos={trending} />
+            ))}
+          {newReleases.length > 0 &&
+            (user ? (
+              <SavableVideoRow
+                title="New releases"
+                videos={newReleases}
+                savedVideoIds={savedVideoIds}
+                savingVideoId={savingVideoId}
+                onSave={handleSaveToWatchlist}
+              />
+            ) : (
+              <VideoRow title="New releases" videos={newReleases} />
+            ))}
+          {moreToWatch.length > 0 &&
+            (user ? (
+              <SavableVideoRow
+                title="More to watch"
+                videos={moreToWatch}
+                savedVideoIds={savedVideoIds}
+                savingVideoId={savingVideoId}
+                onSave={handleSaveToWatchlist}
+              />
+            ) : (
+              <VideoRow title="More to watch" videos={moreToWatch} />
+            ))}
         </div>
       </main>
     </div>

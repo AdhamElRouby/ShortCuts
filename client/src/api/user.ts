@@ -49,6 +49,28 @@ export interface WatchHistoryItem {
   };
 }
 
+export interface WatchlistItem {
+  userId: string;
+  videoId: string;
+  addedAt: string;
+  video: {
+    id: string;
+    title: string;
+    description: string | null;
+    cloudinaryId: string;
+    thumbnailUrl: string | null;
+    duration: number | null;
+    genre: string;
+    createdAt: string;
+    averageRating: number;
+    creator: {
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    };
+  };
+}
+
 export const getSubscribedChannels = async (): Promise<ChannelInfo[]> => {
   const { data } = await axiosInstance.get<ChannelInfo[]>('/users/subscriptions');
   return data;
@@ -108,6 +130,32 @@ export const addWatchHistoryEntry = async (
 ): Promise<{ id: string; watchedAt: string }> => {
   const { data } = await axiosInstance.post<{ id: string; watchedAt: string }>(
     `/users/history/${videoId}`,
+  );
+  return data;
+};
+
+export const getWatchlist = async (): Promise<WatchlistItem[]> => {
+  const { data } = await axiosInstance.get<WatchlistItem[]>('/users/watchlist');
+  return data;
+};
+
+export const addToWatchlist = async (
+  videoId: string,
+): Promise<{ userId: string; videoId: string; addedAt: string; saved: boolean }> => {
+  const { data } = await axiosInstance.post<{
+    userId: string;
+    videoId: string;
+    addedAt: string;
+    saved: boolean;
+  }>(`/users/watchlist/${videoId}`);
+  return data;
+};
+
+export const removeFromWatchlist = async (
+  videoId: string,
+): Promise<{ removed: boolean }> => {
+  const { data } = await axiosInstance.delete<{ removed: boolean }>(
+    `/users/watchlist/${videoId}`,
   );
   return data;
 };

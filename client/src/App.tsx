@@ -12,6 +12,7 @@ import Channels from '@/pages/Channels/Channels';
 import Subscriptions from '@/pages/Subscriptions/Subscriptions';
 import SearchPage from '@/pages/Search/Search';
 import History from '@/pages/History/History';
+import Watchlist from '@/pages/Watchlist/Watchlist';
 import ProtectedRoute from '@/components/ProtectedRoute/ProtectedRoute';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
         <Route path="/subscriptions" element={<Subscriptions />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/history" element={<History />} />
+        <Route path="/watchlist" element={<Watchlist />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

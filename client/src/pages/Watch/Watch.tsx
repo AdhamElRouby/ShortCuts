@@ -6,7 +6,7 @@ import Navbar from '@/components/Navbar/Navbar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, MessageSquare, Send } from 'lucide-react';
+import { Star, MessageSquare, Send, Plus, Check } from 'lucide-react';
 import {
   getVideoById,
   getComments,
@@ -15,7 +15,7 @@ import {
   getThumbnailUrl,
   getHlsUrl,
 } from '@/api/video';
-import { addWatchHistoryEntry } from '@/api/user';
+import { addToWatchlist, addWatchHistoryEntry, getWatchlist } from '@/api/user';
 import Loading from '../Loading/Loading';
 
 interface Comment {
@@ -63,6 +63,8 @@ export default function WatchPage() {
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
+  const [isSavedToWatchlist, setIsSavedToWatchlist] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!videoId) return;
@@ -97,6 +99,40 @@ export default function WatchPage() {
       console.error('Failed to add watch history entry:', err);
     });
   }, [videoId, user]);
+
+  useEffect(() => {
+    if (!videoId || !user) {
+      setIsSavedToWatchlist(false);
+      return;
+    }
+
+    let isMounted = true;
+    void getWatchlist()
+      .then((items) => {
+        if (!isMounted) return;
+        setIsSavedToWatchlist(items.some((item) => item.videoId === videoId));
+      })
+      .catch((err) => {
+        console.error('Failed to load watchlist status:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [videoId, user]);
+
+  const handleSaveToWatchlist = async () => {
+    if (!video || !user || isSavedToWatchlist) return;
+    setWatchlistLoading(true);
+    try {
+      await addToWatchlist(video.id);
+      setIsSavedToWatchlist(true);
+    } catch (err) {
+      console.error('Failed to save to watchlist:', err);
+    } finally {
+      setWatchlistLoading(false);
+    }
+  };
 
   const handleRate = async (rating: number) => {
     if (!user || !video) return;
@@ -213,7 +249,7 @@ export default function WatchPage() {
                 </div>
               </Link>
 
-              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex min-h-[112px] min-w-0 flex-col justify-between rounded-xl bg-black/45 p-4 ring-1 ring-white/10">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
                     Average rating
@@ -279,6 +315,34 @@ export default function WatchPage() {
                     </p>
                   </div>
                 )}
+
+                <div className="flex min-h-[112px] min-w-0 flex-col justify-between rounded-xl bg-black/45 p-4 ring-1 ring-white/10">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+                    Watch list
+                  </p>
+                  {user ? (
+                    <Button
+                      type="button"
+                      onClick={handleSaveToWatchlist}
+                      disabled={watchlistLoading || isSavedToWatchlist}
+                      className="mt-3 bg-gold text-background hover:bg-gold-light disabled:opacity-70"
+                    >
+                      {isSavedToWatchlist ? (
+                        <Check className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Plus className="mr-2 h-4 w-4" />
+                      )}
+                      {isSavedToWatchlist ? 'Saved to Watch List' : 'Save to Watch List'}
+                    </Button>
+                  ) : (
+                    <p className="mt-3 text-sm text-zinc-400">
+                      <Link to="/login" className="font-semibold text-gold hover:underline">
+                        Sign in
+                      </Link>{' '}
+                      to save this movie.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
