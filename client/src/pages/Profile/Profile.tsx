@@ -31,10 +31,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Loader2, Pencil, Upload } from 'lucide-react';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
+import { ArrowLeft, BarChart3, Film, Loader2, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Navbar from '@/components/Navbar/Navbar';
+import ChannelAnalytics from '@/components/ChannelAnalytics/ChannelAnalytics';
 import Loading from '../Loading/Loading';
 
 function Profile() {
@@ -334,45 +341,64 @@ function Profile() {
         </div>
 
         <section className="mt-10 md:mt-14">
-          <div className="mb-6 flex items-center justify-between border-b border-white/[0.06] pb-3">
-            <h2 className="text-xl font-semibold text-foreground md:text-2xl">
-              <span className="bg-gradient-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
+          <Tabs defaultValue="videos" className="w-full gap-6">
+            <TabsList
+              variant="line"
+              className="w-full justify-start border-b border-white/[0.06] pb-0"
+            >
+              <TabsTrigger value="videos" className="text-sm">
+                <Film className="h-4 w-4" />
                 Videos
-              </span>
-            </h2>
-          </div>
-          {data.videos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No videos yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {data.videos.map((v) => (
-                <Link
-                  key={v.id}
-                  to={`/video/${v.id}`}
-                  className="group overflow-hidden rounded-lg border border-white/[0.05] bg-card transition-all duration-300 hover:-translate-y-1 hover:border-gold/40 hover:shadow-[0_0_24px_rgba(201,162,39,0.15)]"
-                >
-                  <div className="aspect-video overflow-hidden bg-black/50">
-                    <img
-                      src={getThumbnailUrl(v.cloudinaryId, v.thumbnailUrl)}
-                      alt=""
-                      className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
-                    />
-                  </div>
-                  <div className="space-y-1 p-3">
-                    <p className="line-clamp-2 font-semibold text-foreground transition-colors group-hover:text-gold">
-                      {v.title}
-                    </p>
-                    {v.duration != null && (
-                      <p className="text-xs tabular-nums text-muted-foreground">
-                        {Math.floor(v.duration / 60)}:
-                        {String(v.duration % 60).padStart(2, '0')}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+              </TabsTrigger>
+              {data.isOwnProfile && (
+                <TabsTrigger value="analytics" className="text-sm">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            <TabsContent value="videos">
+              {data.videos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No videos yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {data.videos.map((v) => (
+                    <Link
+                      key={v.id}
+                      to={`/video/${v.id}`}
+                      className="group overflow-hidden rounded-lg border border-white/[0.05] bg-card transition-all duration-300 hover:-translate-y-1 hover:border-gold/40 hover:shadow-[0_0_24px_rgba(201,162,39,0.15)]"
+                    >
+                      <div className="aspect-video overflow-hidden bg-black/50">
+                        <img
+                          src={getThumbnailUrl(v.cloudinaryId, v.thumbnailUrl)}
+                          alt=""
+                          className="h-full w-full object-cover transition-opacity group-hover:opacity-90"
+                        />
+                      </div>
+                      <div className="space-y-1 p-3">
+                        <p className="line-clamp-2 font-semibold text-foreground transition-colors group-hover:text-gold">
+                          {v.title}
+                        </p>
+                        {v.duration != null && (
+                          <p className="text-xs tabular-nums text-muted-foreground">
+                            {Math.floor(v.duration / 60)}:
+                            {String(v.duration % 60).padStart(2, '0')}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {data.isOwnProfile && (
+              <TabsContent value="analytics">
+                <ChannelAnalytics />
+              </TabsContent>
+            )}
+          </Tabs>
         </section>
       </main>
 
