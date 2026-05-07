@@ -249,3 +249,117 @@ export const unsubscribeFromUser = async (req: Request, res: Response) => {
 
   res.status(200).json({ subscriberCount, isSubscribed: false });
 };
+
+export const getWatchHistory = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const history = await prisma.watchHistory.findMany({
+    where: { userId: viewerId },
+    orderBy: { watchedAt: 'desc' },
+    include: {
+      video: {
+        select: {
+          id: true,
+          title: true,
+          cloudinaryId: true,
+          thumbnailUrl: true,
+          duration: true,
+          creator: {
+            select: {
+              id: true,
+              displayName: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const latestByVideoId = new Map<string, (typeof history)[number]>();
+  for (const entry of history) {
+    if (!latestByVideoId.has(entry.videoId)) {
+      latestByVideoId.set(entry.videoId, entry);
+    }
+  }
+
+  res.status(200).json(
+    Array.from(latestByVideoId.values()).map((entry) => ({
+      id: entry.id,
+      watchedAt: entry.watchedAt,
+      video: {
+        id: entry.video.id,
+        title: entry.video.title,
+        cloudinaryId: entry.video.cloudinaryId,
+        thumbnailUrl: entry.video.thumbnailUrl,
+        duration: entry.video.duration,
+        creator: {
+          id: entry.video.creator.id,
+          name: entry.video.creator.displayName,
+        },
+      },
+    })),
+  );
+};
+
+export const addWatchHistoryEntry = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const videoId = req.params.videoId as string;
+  if (!UUID_RE.test(videoId)) {
+    throw new CustomAPIError('Video not found', 404);
+  }
+
+  const video = await prisma.video.findUnique({
+    where: { id: videoId },
+    select: { id: true, isPublic: true, creatorId: true },
+  });
+
+  if (!video || (!video.isPublic && video.creatorId !== viewerId)) {
+    throw new CustomAPIError('Video not found', 404);
+  }
+
+  const existingEntry = await prisma.watchHistory.findFirst({
+    where: {
+      userId: viewerId,
+      videoId,
+    },
+    orderBy: { watchedAt: 'desc' },
+  });
+
+  const entry = existingEntry
+    ? await prisma.watchHistory.update({
+        where: { id: existingEntry.id },
+        data: { watchedAt: new Date() },
+      })
+    : await prisma.watchHistory.create({
+        data: {
+          userId: viewerId,
+          videoId,
+        },
+      });
+
+  // Guard against duplicate rows (e.g. concurrent duplicate requests)
+  // and keep only the latest row for this user/video pair.
+  await prisma.watchHistory.deleteMany({
+    where: {
+      userId: viewerId,
+      videoId,
+      id: { not: entry.id },
+    },
+  });
+
+  res.status(201).json({ id: entry.id, watchedAt: entry.watchedAt });
+};
+
+export const clearWatchHistory = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  await prisma.watchHistory.deleteMany({
+    where: { userId: viewerId },
+  });
+
+  res.status(200).json({ cleared: true });
+};
