@@ -35,7 +35,7 @@ const Logo = () => (
 );
 
 export default function Navbar() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState('');
@@ -48,9 +48,9 @@ export default function Navbar() {
   }, []);
 
   const initials =
-    user?.displayName
+    profile?.displayName
       ?.split(' ')
-      .map((part) => part[0])
+      .map((part: string) => part[0])
       .filter(Boolean)
       .slice(0, 2)
       .join('')
@@ -150,8 +150,8 @@ export default function Navbar() {
                 aria-label="Account menu"
               >
                 <Avatar size="default" className="size-9">
-                  {user?.avatarUrl ? (
-                    <AvatarImage src={user.avatarUrl} alt={user.displayName ?? ''} />
+                  {profile?.avatarUrl ? (
+                    <AvatarImage src={profile.avatarUrl} alt={profile.displayName ?? ''} />
                   ) : null}
                   <AvatarFallback className="bg-gold/15 text-xs font-semibold text-gold">
                     {initials}
@@ -165,7 +165,7 @@ export default function Navbar() {
             >
               <DropdownMenuLabel className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium text-foreground">
-                  {user?.displayName ?? 'User'}
+                  {profile?.displayName ?? 'User'}
                 </span>
                 <span className="text-xs font-normal text-muted-foreground truncate">
                   Welcome back
