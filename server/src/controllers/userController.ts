@@ -127,6 +127,35 @@ export const getChannels = async (req: Request, res: Response) => {
   res.status(200).json(channels);
 };
 
+export const getSubscribedChannels = async (req: Request, res: Response) => {
+  const viewerId = req.user?.id;
+  if (!viewerId) throw new CustomAPIError('Unauthorized', 401);
+
+  const subscriptions = await prisma.subscription.findMany({
+    where: { subscriberId: viewerId },
+    include: { channel: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const channels = await Promise.all(
+    subscriptions.map(async (sub) => {
+      const subscriberCount = await prisma.subscription.count({
+        where: { channelId: sub.channelId },
+      });
+
+      return {
+        id: sub.channel.id,
+        displayName: sub.channel.displayName,
+        avatarUrl: sub.channel.avatarUrl,
+        subscriberCount,
+        isSubscribed: true,
+      };
+    })
+  );
+
+  res.status(200).json(channels);
+};
+
 export const getTopChannels = async (req: Request, res: Response) => {
   const viewerId = req.user?.id;
   const limit = parseLimit(req.query.limit);

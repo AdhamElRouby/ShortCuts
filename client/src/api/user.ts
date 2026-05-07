@@ -33,6 +33,11 @@ export interface ChannelInfo {
   isSubscribed: boolean;
 }
 
+export const getSubscribedChannels = async (): Promise<ChannelInfo[]> => {
+  const { data } = await axiosInstance.get<ChannelInfo[]>('/users/subscriptions');
+  return data;
+};
+
 export const getChannels = async (): Promise<ChannelInfo[]> => {
   const { data } = await axiosInstance.get<ChannelInfo[]>('/users');
   return data;
