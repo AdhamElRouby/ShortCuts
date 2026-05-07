@@ -76,10 +76,8 @@ export default function Navbar() {
         )}
       >
         <div className="mx-auto flex h-16 min-w-0 max-w-[1600px] items-center gap-2 px-4 sm:gap-4 md:px-8">
-          {/* Logo + primary nav */}
           <div className="flex min-w-0 shrink-0 items-center gap-4 md:gap-8">
             <Logo />
-
             <nav className="hidden items-center md:flex">
               {navItems.map((item) => (
                 <NavLink
@@ -88,21 +86,17 @@ export default function Navbar() {
                   className={({ isActive }) =>
                     cn(
                       'relative px-4 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
+                      isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                     )
                   }
                 >
                   {({ isActive }) => (
                     <>
                       <div className="flex items-center gap-2">
-                        <item.icon className={cn("h-4 w-4", isActive ? "text-gold" : "text-muted-foreground")} />
+                        <item.icon className={cn('h-4 w-4', isActive ? 'text-gold' : 'text-muted-foreground')} />
                         {item.label}
                       </div>
-                      {isActive && (
-                        <span className="absolute -bottom-[21px] left-0 right-0 h-[2px] bg-gold" />
-                      )}
+                      {isActive && <span className="absolute -bottom-[21px] left-0 right-0 h-[2px] bg-gold" />}
                     </>
                   )}
                 </NavLink>
@@ -110,7 +104,6 @@ export default function Navbar() {
             </nav>
           </div>
 
-          {/* Search — centered in remaining space */}
           <form
             onSubmit={handleSearch}
             className="group relative min-w-0 flex-1 md:mx-auto md:max-w-xl lg:max-w-2xl"
@@ -131,7 +124,7 @@ export default function Navbar() {
               Search
             </Button>
           </form>
-          {/* Notifications + avatar */}
+
           <div className="flex shrink-0 items-center gap-1 md:gap-2">
             <Button
               variant="ghost"
@@ -180,17 +173,11 @@ export default function Navbar() {
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate('/watchlist')}
-                  className="cursor-pointer"
-                >
+                <DropdownMenuItem onClick={() => navigate('/watchlist')} className="cursor-pointer">
                   <Bookmark className="w-4 h-4 mr-2" />
                   My Watchlist
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate('/history')}
-                  className="cursor-pointer"
-                >
+                <DropdownMenuItem onClick={() => navigate('/history')} className="cursor-pointer">
                   <Clock className="w-4 h-4 mr-2" />
                   Watch History
                 </DropdownMenuItem>
@@ -217,7 +204,7 @@ export default function Navbar() {
                 className={({ isActive }) =>
                   cn(
                     'flex h-full w-full flex-col items-center justify-center gap-1 transition-colors',
-                    isActive ? 'text-gold' : 'text-muted-foreground hover:text-foreground'
+                    isActive ? 'text-gold' : 'text-muted-foreground hover:text-foreground',
                   )
                 }
               >
