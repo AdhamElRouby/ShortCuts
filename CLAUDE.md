@@ -24,7 +24,7 @@ University group project (6 members) — an online streaming platform for short 
 - **Supabase Auth** — registration (email + Gmail), login, forgot password. We do NOT store passwords.
 - **Supabase PostgreSQL** — database accessed via Prisma. Connection string from Supabase.
 - **Cloudinary** — all media: video/image upload, transcoding, HLS adaptive streaming, CDN delivery. Store Cloudinary public IDs and URLs in DB.
-- **Stripe** — server-side donation processing (later phase)
+- **Stripe** — server-side donation processing via Stripe Checkout (hosted payment page)
 
 ## Project Structure
 ```
@@ -95,8 +95,20 @@ University group project (6 members) — an online streaming platform for short 
 - If null → construct thumbnail from `cloudinary_id` by swapping extension to `.jpg`
 - Frontend must have a helper function for this fallback logic
 
+### Donation Flow
+1. Viewer clicks Donate on a creator's profile → modal collects amount
+2. Frontend calls `POST /api/donations/checkout-session` with `{ creatorId, amount, successUrl, cancelUrl }`
+   - `successUrl` and `cancelUrl` are built using `window.location.origin` so they work on any deployment (Vercel, local, etc.)
+   - `successUrl` includes Stripe's `{CHECKOUT_SESSION_ID}` placeholder so the session ID is passed back after redirect
+3. Backend creates a Stripe Checkout Session (stores `donorId` + `creatorId` in session metadata) and returns the hosted URL
+4. Frontend redirects to Stripe's hosted payment page
+5. After payment, Stripe redirects to `/payment-success?session_id=...&amount=...&creator=...`
+6. PaymentSuccess page calls `POST /api/donations/confirm` with the session ID
+7. Backend verifies `payment_status === 'paid'` with Stripe, saves to the `donation` table (idempotent — unique on `stripe_session_id`)
+8. Donation history is visible in the creator's Channel Analytics tab via `GET /api/donations/received`
+
 ## Database Schema (Prisma)
-Tables: `user_profile`, `video`, `rating`, `comment`, `subscription`, `watch_history`, `watchlist`
+Tables: `user_profile`, `video`, `rating`, `comment`, `subscription`, `watch_history`, `watchlist`, `donation`
 - `user_profile.id` references Supabase `auth.users.id` (UUID)
 - See `/server/prisma/schema.prisma` for full schema
 

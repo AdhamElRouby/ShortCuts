@@ -217,7 +217,7 @@ function Profile() {
     if (!userId || !data) return;
     setDonating(true);
     try {
-      const successUrl = `${window.location.origin}/payment-success?amount=${parsed}&creator=${encodeURIComponent(data.displayName)}`;
+      const successUrl = `${window.location.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&amount=${parsed}&creator=${encodeURIComponent(data.displayName)}`;
       const cancelUrl = `${window.location.origin}/profile/${userId}`;
       const { url } = await createDonationCheckoutSession({
         creatorId: userId,
