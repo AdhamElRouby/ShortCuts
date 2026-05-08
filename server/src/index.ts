@@ -10,6 +10,7 @@ import userRouter from './routes/userRoutes';
 import videoRouter from './routes/videoRoutes';
 import searchRouter from './routes/searchRoutes';
 import analyticsRouter from './routes/analyticsRoutes';
+import donationRouter from './routes/donationRoutes';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +28,7 @@ app.use('/api/users', userRouter);
 app.use('/api/videos', videoRouter);
 app.use('/api/search', searchRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/donations', donationRouter);
 
 // ============= Error Handling Middleware =============
 // Handle 404 routes not found

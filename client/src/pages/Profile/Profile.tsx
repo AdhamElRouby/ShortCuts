@@ -9,6 +9,7 @@ import {
   type PublicProfile,
 } from '@/api/user';
 import { uploadVideo, getThumbnailUrl } from '@/api/video';
+import { createDonationCheckoutSession } from '@/api/donation';
 import { VIDEO_GENRES } from '@/constants/videoGenres';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +38,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { ArrowLeft, BarChart3, Film, Loader2, Pencil, Upload } from 'lucide-react';
+import { ArrowLeft, BarChart3, Film, Heart, Loader2, Pencil, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import Navbar from '@/components/Navbar/Navbar';
@@ -74,6 +75,11 @@ function Profile() {
   const [uploading, setUploading] = useState(false);
 
   const [subscribeBusy, setSubscribeBusy] = useState(false);
+
+  const [donateOpen, setDonateOpen] = useState(false);
+  const [donateAmount, setDonateAmount] = useState('');
+  const [donateAmountError, setDonateAmountError] = useState<string | null>(null);
+  const [donating, setDonating] = useState(false);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -200,6 +206,32 @@ function Profile() {
     }
   };
 
+  const handleDonate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDonateAmountError(null);
+    const parsed = parseFloat(donateAmount);
+    if (!donateAmount || isNaN(parsed) || parsed < 1) {
+      setDonateAmountError('Enter an amount of at least $1');
+      return;
+    }
+    if (!userId || !data) return;
+    setDonating(true);
+    try {
+      const successUrl = `${window.location.origin}/payment-success?amount=${parsed}&creator=${encodeURIComponent(data.displayName)}`;
+      const cancelUrl = `${window.location.origin}/profile/${userId}`;
+      const { url } = await createDonationCheckoutSession({
+        creatorId: userId,
+        amount: parsed,
+        successUrl,
+        cancelUrl,
+      });
+      window.location.href = url;
+    } catch {
+      toast.error('Could not initiate donation');
+      setDonating(false);
+    }
+  };
+
   if (loading) {
     return <Loading />;
   }
@@ -315,25 +347,40 @@ function Profile() {
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    type="button"
-                    disabled={subscribeBusy}
-                    className={cn(
-                      'font-semibold',
-                      data.isSubscribed
-                        ? 'border border-white/15 bg-white/10 text-white hover:bg-white/15'
-                        : 'bg-gold text-background shadow-[0_0_20px_rgba(201,162,39,0.2)] hover:bg-gold-light',
-                    )}
-                    onClick={toggleSubscribe}
-                  >
-                    {subscribeBusy ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : data.isSubscribed ? (
-                      'Unsubscribe'
-                    ) : (
-                      'Subscribe'
-                    )}
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      disabled={subscribeBusy}
+                      className={cn(
+                        'font-semibold',
+                        data.isSubscribed
+                          ? 'border border-white/15 bg-white/10 text-white hover:bg-white/15'
+                          : 'bg-gold text-background shadow-[0_0_20px_rgba(201,162,39,0.2)] hover:bg-gold-light',
+                      )}
+                      onClick={toggleSubscribe}
+                    >
+                      {subscribeBusy ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : data.isSubscribed ? (
+                        'Unsubscribe'
+                      ) : (
+                        'Subscribe'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-gold/40 bg-gold/10 text-gold hover:bg-gold/20 hover:border-gold/60 font-semibold"
+                      onClick={() => {
+                        setDonateAmount('');
+                        setDonateAmountError(null);
+                        setDonateOpen(true);
+                      }}
+                    >
+                      <Heart className="mr-2 h-4 w-4" />
+                      Donate
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -473,6 +520,84 @@ function Profile() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   'Save'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={donateOpen} onOpenChange={(o) => !donating && setDonateOpen(o)}>
+        <DialogContent className="border-white/[0.08] bg-popover/95 backdrop-blur-md sm:max-w-sm">
+          <form onSubmit={handleDonate}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-gold" />
+                Support {data.displayName}
+              </DialogTitle>
+              <DialogDescription>
+                Your donation goes directly to this creator.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="donateAmount">Amount (USD)</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    id="donateAmount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    placeholder="10.00"
+                    value={donateAmount}
+                    onChange={(e) => {
+                      setDonateAmount(e.target.value);
+                      if (donateAmountError) setDonateAmountError(null);
+                    }}
+                    className="bg-white/4 border-white/10 pl-7"
+                  />
+                </div>
+                {donateAmountError && (
+                  <p className="text-sm text-destructive">{donateAmountError}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[5, 10, 25, 50].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setDonateAmount(String(preset));
+                      if (donateAmountError) setDonateAmountError(null);
+                    }}
+                    className="rounded-md border border-white/10 bg-white/4 px-3 py-1 text-sm text-muted-foreground transition-colors hover:border-gold/40 hover:bg-gold/10 hover:text-gold"
+                  >
+                    ${preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={donating}
+                onClick={() => setDonateOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={donating}
+                className="bg-gold text-background hover:bg-gold-light font-semibold"
+              >
+                {donating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Checkout'
                 )}
               </Button>
             </DialogFooter>
