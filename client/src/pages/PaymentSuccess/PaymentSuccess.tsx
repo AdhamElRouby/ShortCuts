@@ -1,12 +1,25 @@
+import { useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar/Navbar';
+import { confirmDonation } from '@/api/donation';
 
 function PaymentSuccess() {
   const [params] = useSearchParams();
+  const sessionId = params.get('session_id');
   const amount = params.get('amount');
   const creator = params.get('creator');
+
+  const confirmed = useRef(false);
+
+  useEffect(() => {
+    if (!sessionId || confirmed.current) return;
+    confirmed.current = true;
+    confirmDonation(sessionId).catch(() => {
+      // Silent — payment went through, recording is best-effort
+    });
+  }, [sessionId]);
 
   const formattedAmount =
     amount && !isNaN(parseFloat(amount))
@@ -30,7 +43,7 @@ function PaymentSuccess() {
           Your donation was successful.
         </p>
 
-        <div className="mt-8 w-full rounded-xl border border-white/[0.06] bg-card/40 p-6 text-left space-y-4">
+        <div className="mt-8 w-full rounded-xl border border-white/6 bg-card/40 p-6 text-left space-y-4">
           <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-gold/75">
             Payment details
           </p>

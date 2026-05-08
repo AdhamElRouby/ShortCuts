@@ -5,6 +5,7 @@ import {
   type ChannelAnalytics as ChannelAnalyticsData,
   type ChannelAnalyticsVideo,
 } from '@/api/analytics';
+import { getReceivedDonations, type ReceivedDonation } from '@/api/donation';
 import { getThumbnailUrl } from '@/api/video';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Star } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ArrowDown, ArrowUp, ArrowUpDown, Heart, Loader2, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type SortKey =
@@ -31,6 +33,12 @@ type SortDir = 'asc' | 'desc';
 const COMPACT = new Intl.NumberFormat('en', {
   notation: 'compact',
   maximumFractionDigits: 1,
+});
+
+const USD = new Intl.NumberFormat('en', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
 });
 
 function formatCount(n: number): string {
@@ -50,6 +58,20 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatUSD(cents: number): string {
+  return USD.format(cents / 100);
+}
+
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || '?';
+}
+
 function StatCard({
   label,
   value,
@@ -60,7 +82,7 @@ function StatCard({
   sublabel?: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-card/40 p-5 transition-colors hover:border-gold/25">
+    <div className="rounded-xl border border-white/6 bg-card/40 p-5 transition-colors hover:border-gold/25">
       <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
@@ -111,6 +133,9 @@ function ChannelAnalytics() {
   const [sortKey, setSortKey] = useState<SortKey>('createdAt');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
+  const [donations, setDonations] = useState<ReceivedDonation[]>([]);
+  const [donationsLoading, setDonationsLoading] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -126,6 +151,25 @@ function ChannelAnalytics() {
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDonationsLoading(true);
+    getReceivedDonations()
+      .then((res) => {
+        if (cancelled) return;
+        setDonations(res);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      })
+      .finally(() => {
+        if (!cancelled) setDonationsLoading(false);
       });
     return () => {
       cancelled = true;
@@ -161,6 +205,11 @@ function ChannelAnalytics() {
     });
     return copy;
   }, [data, sortKey, sortDir]);
+
+  const totalDonatedCents = useMemo(
+    () => donations.reduce((sum, d) => sum + d.amountCents, 0),
+    [donations],
+  );
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -199,6 +248,7 @@ function ChannelAnalytics() {
 
   const { totals, videos } = data;
   const hasVideos = videos.length > 0;
+  const hasDonations = donations.length > 0;
 
   return (
     <div className="space-y-8">
@@ -224,7 +274,7 @@ function ChannelAnalytics() {
       </div>
 
       <section>
-        <div className="mb-4 flex items-center justify-between border-b border-white/[0.06] pb-3">
+        <div className="mb-4 flex items-center justify-between border-b border-white/6 pb-3">
           <h3 className="text-lg font-semibold text-foreground md:text-xl">
             Per-video performance
           </h3>
@@ -243,11 +293,11 @@ function ChannelAnalytics() {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-card/30">
+          <div className="overflow-hidden rounded-xl border border-white/6 bg-card/30">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/[0.06] hover:bg-transparent">
-                  <TableHead className="w-[44%] min-w-[260px] py-3">
+                <TableRow className="border-white/6 hover:bg-transparent">
+                  <TableHead className="w-[44%] min-w-65 py-3">
                     <SortHeader
                       label="Video"
                       active={sortKey === 'title'}
@@ -306,7 +356,7 @@ function ChannelAnalytics() {
                 {sortedVideos.map((v) => (
                   <TableRow
                     key={v.id}
-                    className="border-white/[0.04] hover:bg-white/[0.03]"
+                    className="border-white/4 hover:bg-white/3"
                   >
                     <TableCell className="py-3">
                       <Link
@@ -327,7 +377,7 @@ function ChannelAnalytics() {
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {v.genre}
                             {!v.isPublic && (
-                              <span className="ml-2 rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] uppercase tracking-wider">
+                              <span className="ml-2 rounded border border-white/10 bg-white/4 px-1.5 py-0.5 text-[10px] uppercase tracking-wider">
                                 Private
                               </span>
                             )}
@@ -356,6 +406,95 @@ function ChannelAnalytics() {
                     </TableCell>
                     <TableCell className="py-3 text-right tabular-nums text-foreground">
                       {formatCount(v.commentCount)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </section>
+
+      {/* Donations received */}
+      <section>
+        <div className="mb-4 flex items-center justify-between border-b border-white/6 pb-3">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground md:text-xl">
+            <Heart className="h-5 w-5 text-gold" />
+            Donations received
+          </h3>
+          {hasDonations && (
+            <p className="text-xs text-muted-foreground">
+              {donations.length} {donations.length === 1 ? 'donation' : 'donations'}{' '}
+              &middot;{' '}
+              <span className="font-semibold text-gold tabular-nums">
+                {formatUSD(totalDonatedCents)}
+              </span>{' '}
+              total
+            </p>
+          )}
+        </div>
+
+        {donationsLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-gold/70" />
+          </div>
+        ) : !hasDonations ? (
+          <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-white/10 bg-card/30 px-6 py-14 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gold/10 ring-1 ring-gold/20">
+              <Heart className="h-6 w-6 text-gold/60" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">No donations yet</p>
+              <p className="text-sm text-muted-foreground">
+                When viewers support your channel, their donations will appear here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-white/6 bg-card/30">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-white/6 hover:bg-transparent">
+                  <TableHead className="py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Supporter
+                  </TableHead>
+                  <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Amount
+                  </TableHead>
+                  <TableHead className="py-3 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Date
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {donations.map((d) => (
+                  <TableRow
+                    key={d.id}
+                    className="border-white/4 hover:bg-white/3"
+                  >
+                    <TableCell className="py-3">
+                      <Link
+                        to={`/profile/${d.donor.id}`}
+                        className="group flex items-center gap-3"
+                      >
+                        <Avatar className="h-8 w-8 shrink-0 border border-white/10">
+                          {d.donor.avatarUrl && (
+                            <AvatarImage src={d.donor.avatarUrl} alt="" className="object-cover" />
+                          )}
+                          <AvatarFallback className="bg-gold/10 text-xs font-semibold text-gold">
+                            {initials(d.donor.displayName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-foreground transition-colors group-hover:text-gold">
+                          {d.donor.displayName}
+                        </span>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="py-3 text-right font-semibold tabular-nums text-gold">
+                      {formatUSD(d.amountCents)}
+                    </TableCell>
+                    <TableCell className="py-3 text-right text-sm text-muted-foreground">
+                      {formatDate(d.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}

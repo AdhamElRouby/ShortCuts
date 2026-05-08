@@ -42,15 +42,31 @@ model UserProfile {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  videos        Video[]
-  ratings       Rating[]
-  comments      Comment[]
-  watchHistory  WatchHistory[]
-  watchlist     Watchlist[]
-  subscriptions Subscription[] @relation("subscriber")
-  subscribers   Subscription[] @relation("channel")
+  videos             Video[]
+  ratings            Rating[]
+  comments           Comment[]
+  watchHistory       WatchHistory[]
+  watchlist          Watchlist[]
+  subscriptions      Subscription[] @relation("subscriber")
+  subscribers        Subscription[] @relation("channel")
+  donationsMade      Donation[]     @relation("donations_made")
+  donationsReceived  Donation[]     @relation("donations_received")
 
   @@map("user_profile")
+}
+
+model Donation {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  donorId         String   @map("donor_id") @db.Uuid
+  creatorId       String   @map("creator_id") @db.Uuid
+  amountCents     Int      @map("amount_cents")
+  stripeSessionId String   @unique @map("stripe_session_id") @db.VarChar(512)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  donor   UserProfile @relation("donations_made", fields: [donorId], references: [id], onDelete: Cascade)
+  creator UserProfile @relation("donations_received", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@map("donation")
 }
 
 model Video {

@@ -57,9 +57,81 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
         quantity: 1,
       },
     ],
+    metadata: { donorId, creatorId },
     success_url: successUrl,
     cancel_url: cancelUrl,
   });
 
   res.status(200).json({ url: session.url });
+};
+
+export const confirmDonation = async (req: Request, res: Response) => {
+  const donorId = req.user?.id;
+  if (!donorId) throw new CustomAPIError('Unauthorized', 401);
+
+  const { sessionId } = req.body as { sessionId: string };
+  if (!sessionId || typeof sessionId !== 'string') {
+    throw new CustomAPIError('Missing sessionId', 400);
+  }
+
+  // Idempotent — if already recorded return it
+  const existing = await prisma.donation.findUnique({
+    where: { stripeSessionId: sessionId },
+  });
+  if (existing) {
+    res.status(200).json({ recorded: true, donation: existing });
+    return;
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status !== 'paid') {
+    throw new CustomAPIError('Payment not completed', 402);
+  }
+
+  const creatorId = session.metadata?.creatorId;
+  if (!creatorId || !UUID_RE.test(creatorId)) {
+    throw new CustomAPIError('Invalid session metadata', 400);
+  }
+
+  const amountCents = session.amount_total ?? 0;
+
+  const donation = await prisma.donation.create({
+    data: {
+      donorId,
+      creatorId,
+      amountCents,
+      stripeSessionId: sessionId,
+    },
+  });
+
+  res.status(201).json({ recorded: true, donation });
+};
+
+export const getReceivedDonations = async (req: Request, res: Response) => {
+  const creatorId = req.user?.id;
+  if (!creatorId) throw new CustomAPIError('Unauthorized', 401);
+
+  const donations = await prisma.donation.findMany({
+    where: { creatorId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      donor: {
+        select: { id: true, displayName: true, avatarUrl: true },
+      },
+    },
+  });
+
+  res.status(200).json(
+    donations.map((d) => ({
+      id: d.id,
+      amountCents: d.amountCents,
+      createdAt: d.createdAt,
+      donor: {
+        id: d.donor.id,
+        displayName: d.donor.displayName,
+        avatarUrl: d.donor.avatarUrl,
+      },
+    })),
+  );
 };
