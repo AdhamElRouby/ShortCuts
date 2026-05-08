@@ -321,19 +321,23 @@ export default function WatchPage() {
                     Watch list
                   </p>
                   {user ? (
-                    <Button
+                    <button
                       type="button"
                       onClick={handleSaveToWatchlist}
                       disabled={watchlistLoading || isSavedToWatchlist}
-                      className="mt-3 bg-gold text-background hover:bg-gold-light disabled:opacity-70"
+                      className={`mt-3 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-default ${
+                        isSavedToWatchlist
+                          ? 'border border-white/15 bg-white/10 text-white'
+                          : 'bg-gold text-background shadow-[0_0_20px_rgba(201,162,39,0.2)] hover:bg-gold-light'
+                      }`}
                     >
                       {isSavedToWatchlist ? (
-                        <Check className="mr-2 h-4 w-4" />
+                        <Check className="h-4 w-4 shrink-0" />
                       ) : (
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="h-4 w-4 shrink-0" />
                       )}
-                      {isSavedToWatchlist ? 'Saved to Watch List' : 'Save to Watch List'}
-                    </Button>
+                      {isSavedToWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
+                    </button>
                   ) : (
                     <p className="mt-3 text-sm text-zinc-400">
                       <Link to="/login" className="font-semibold text-gold hover:underline">

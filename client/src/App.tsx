@@ -13,6 +13,7 @@ import Subscriptions from '@/pages/Subscriptions/Subscriptions';
 import SearchPage from '@/pages/Search/Search';
 import History from '@/pages/History/History';
 import Watchlist from '@/pages/Watchlist/Watchlist';
+import PaymentSuccess from '@/pages/PaymentSuccess/PaymentSuccess';
 import ProtectedRoute from '@/components/ProtectedRoute/ProtectedRoute';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/history" element={<History />} />
         <Route path="/watchlist" element={<Watchlist />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
